@@ -6,6 +6,7 @@ from __future__ import annotations
 import math
 import os
 import select
+import shutil
 import sys
 from pathlib import Path
 from typing import Optional
@@ -460,6 +461,34 @@ def _interactive_percent_slider(
     return pct
 
 
+def _get_convertible_formats(src: Path) -> list[str]:
+    """Return valid format conversion choices for a file, or empty list if non-convertible."""
+    ext = src.suffix.lower()
+    if ext in PDF_EXTENSIONS or ext in SVG_EXTENSIONS:
+        return []
+    if ext in OFFICE_EXTENSIONS:
+        if shutil.which("soffice") or shutil.which("libreoffice"):
+            return ["keep", "pdf"]
+        return []
+    if ext in VIDEO_EXTENSIONS:
+        return ["keep", "mp4", "webm"]
+    if ext in AUDIO_EXTENSIONS:
+        return ["keep", "mp3", "aac", "m4a", "ogg", "opus"]
+    if ext in FONT_EXTENSIONS:
+        return ["keep", "woff2", "woff"]
+    if is_archive_path(src):
+        arch_ext = get_archive_suffix(src)
+        if arch_ext in (".zip", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz", ".tar.zst", ".tzst"):
+            return ["keep", "tar.zst", "zip", "tar.gz", "tar.xz", "tar.bz2"]
+        return ["keep", "zst", "xz", "gz", "bz2"]
+    if ext in IMAGE_EXTENSIONS:
+        choices = ["keep", "jpg", "png", "webp", "avif", "heic", "gif"]
+        if ext == ".gif":
+            choices.extend(["mp4", "webm"])
+        return choices
+    return []
+
+
 def _interactive_wizard() -> tuple:
     """Prompt the user interactively when launched without file/folder arguments."""
     console.print(
@@ -483,6 +512,11 @@ def _interactive_wizard() -> tuple:
     recursive = False
     kind = "all"
     output_format = "keep"
+    preset = "medium"
+    target_size: Optional[str] = None
+    in_place = False
+    use_slider = False
+
     if target_path.is_dir():
         bundle_dir = Confirm.ask("Bundle entire folder into a single compressed archive?", default=False)
         if bundle_dir:
@@ -494,18 +528,18 @@ def _interactive_wizard() -> tuple:
         else:
             recursive = Confirm.ask("Scan subfolders recursively?", default=False)
             kind = Prompt.ask("Filter file type", choices=MEDIA_TYPE_CHOICES, default="all")
-
-    preset = "medium"
-    target_size: Optional[str] = None
-    use_slider = target_path.is_file()
-    if not use_slider:
+            in_place = Confirm.ask("Overwrite original files?", default=False)
         preset = Prompt.ask("Compression preset", choices=["low", "medium", "high"], default="medium")
         target_size_raw = Prompt.ask("Max target size (e.g. 500KB, 5MB, 45%, or Enter to skip)", default="").strip()
         target_size = target_size_raw or None
-    in_place = False
-    out_path: Optional[Path] = None
+    else:
+        fmt_choices = _get_convertible_formats(target_path)
+        if fmt_choices:
+            output_format = Prompt.ask("Convert format?", choices=fmt_choices, default="keep")
+        in_place = Confirm.ask("Overwrite original file?", default=False)
+        use_slider = True
 
-    return (target_path,), preset, None, None, None, None, output_format, "h264", None, target_size, None, use_slider, kind, out_path, in_place, recursive
+    return (target_path,), preset, None, None, None, None, output_format, "h264", None, target_size, None, use_slider, kind, None, in_place, recursive
 
 
 def _render_summary(results: list[CompressionResult], failures: list[tuple[Path, str]]) -> None:
