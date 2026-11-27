@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified CLI entry point importing PDF, Image, Video, and Audio compressors."""
+"""Unified CLI entry point importing all dedicated media, document, font, and archive compressors."""
 
 from __future__ import annotations
 
@@ -19,14 +19,66 @@ PROJECT_DIR = Path(__file__).resolve().parent
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
+from archive_compressor import (  # noqa: E402
+    ARCHIVE_EXTENSIONS,
+    ARCHIVE_OUTPUT_FORMATS,
+    compress_archive,
+    compress_directory,
+    get_archive_suffix,
+    is_archive_path,
+    resolve_archive_extension,
+)
 from audio_compressor import AUDIO_EXTENSIONS, compress_audio, resolve_audio_extension  # noqa: E402
 from common import CompressionResult, format_size, parse_size  # noqa: E402
+from font_compressor import FONT_EXTENSIONS, compress_font, resolve_font_extension  # noqa: E402
 from image_compressor import IMAGE_EXTENSIONS, compress_image  # noqa: E402
+from office_compressor import OFFICE_EXTENSIONS, compress_office  # noqa: E402
 from pdf_compressor import PDF_EXTENSIONS, compress_pdf  # noqa: E402
+from svg_compressor import SVG_EXTENSIONS, compress_svg  # noqa: E402
 from video_compressor import VIDEO_EXTENSIONS, compress_video  # noqa: E402
 
 console = Console()
-SUPPORTED_EXTENSIONS = PDF_EXTENSIONS | IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
+SUPPORTED_EXTENSIONS = (
+    PDF_EXTENSIONS
+    | IMAGE_EXTENSIONS
+    | VIDEO_EXTENSIONS
+    | AUDIO_EXTENSIONS
+    | SVG_EXTENSIONS
+    | OFFICE_EXTENSIONS
+    | FONT_EXTENSIONS
+    | ARCHIVE_EXTENSIONS
+)
+
+MEDIA_TYPE_CHOICES = ["all", "pdf", "image", "video", "audio", "svg", "office", "font", "archive"]
+FORMAT_CHOICES = [
+    "keep",
+    "jpg",
+    "jpeg",
+    "png",
+    "webp",
+    "avif",
+    "heic",
+    "gif",
+    "mp4",
+    "webm",
+    "mp3",
+    "aac",
+    "m4a",
+    "ogg",
+    "opus",
+    "pdf",
+    "woff",
+    "woff2",
+    "zip",
+    "tar.gz",
+    "tar.bz2",
+    "tar.xz",
+    "tar.zst",
+    "gz",
+    "bz2",
+    "xz",
+    "zst",
+]
 
 
 def _allowed_extensions(kind: str) -> set[str]:
@@ -35,32 +87,63 @@ def _allowed_extensions(kind: str) -> set[str]:
         "image": IMAGE_EXTENSIONS,
         "video": VIDEO_EXTENSIONS,
         "audio": AUDIO_EXTENSIONS,
+        "svg": SVG_EXTENSIONS,
+        "office": OFFICE_EXTENSIONS,
+        "font": FONT_EXTENSIONS,
+        "archive": ARCHIVE_EXTENSIONS,
         "all": SUPPORTED_EXTENSIONS,
     }
     return mapping[kind]
 
 
-def _collect_files(inputs: tuple[Path, ...], recursive: bool, kind: str) -> list[Path]:
-    """Expand file and directory arguments into a deduplicated list of matching assets."""
+def _collect_inputs(
+    inputs: tuple[Path, ...],
+    recursive: bool,
+    kind: str,
+    output_format: str,
+) -> list[Path]:
+    """Expand file and directory arguments into a deduplicated list of targets."""
     allowed = _allowed_extensions(kind)
+    archive_mode = output_format.lower() in ARCHIVE_OUTPUT_FORMATS
     collected: list[Path] = []
     seen: set[Path] = set()
 
     for raw in inputs:
         path = raw.expanduser().resolve()
         if path.is_file():
-            if path.suffix.lower() in allowed and path not in seen:
+            matches = (
+                archive_mode
+                or path.suffix.lower() in allowed
+                or (kind in ("all", "archive") and is_archive_path(path))
+            )
+            if matches and path not in seen:
                 collected.append(path)
                 seen.add(path)
         elif path.is_dir():
+            if archive_mode and kind in ("all", "archive"):
+                if path not in seen:
+                    collected.append(path)
+                    seen.add(path)
+                continue
             iterator = path.rglob("*") if recursive else path.iterdir()
             for item in sorted(iterator):
-                if item.is_file() and item.suffix.lower() in allowed and item not in seen:
-                    if "_compressed" in item.stem:
-                        continue
+                if not item.is_file():
+                    continue
+                if "_compressed" in item.stem or "_compressed." in item.name:
+                    continue
+                matches = item.suffix.lower() in allowed or (kind in ("all", "archive") and is_archive_path(item))
+                if matches and item not in seen:
                     collected.append(item)
                     seen.add(item)
     return collected
+
+
+def _strip_compound_stem(source: Path) -> str:
+    """Return stem with compound archive extensions (.tar.gz, .tar.zst) cleanly removed."""
+    ext = get_archive_suffix(source)
+    if ext and source.name.lower().endswith(ext):
+        return source.name[: -len(ext)]
+    return source.stem
 
 
 def _resolve_destination(
@@ -71,32 +154,60 @@ def _resolve_destination(
     multi_mode: bool,
 ) -> Path:
     """Determine the destination path based on media type, flags, and batch mode."""
+    fmt = output_format.lower()
+    if source.is_dir():
+        ext = ".tar.zst" if fmt == "keep" else f".{fmt.lstrip('.')}"
+        if output is not None:
+            out_resolved = output.expanduser().resolve()
+            if multi_mode or out_resolved.is_dir() or str(output).endswith(("/", "\\")):
+                out_resolved.mkdir(parents=True, exist_ok=True)
+                return out_resolved / f"{source.name}{ext}"
+            return out_resolved if out_resolved.suffix else out_resolved.with_suffix(ext)
+        return source.with_name(f"{source.name}_compressed{ext}")
+
     suffix = source.suffix.lower()
-    if suffix in PDF_EXTENSIONS or suffix in VIDEO_EXTENSIONS:
-        ext = source.suffix if (suffix in PDF_EXTENSIONS or output_format == "keep") else f".{output_format.lower()}"
+    if fmt in ARCHIVE_OUTPUT_FORMATS or is_archive_path(source):
+        ext = resolve_archive_extension(source, fmt)
+        stem = _strip_compound_stem(source)
+        orig_ext = get_archive_suffix(source)
     elif suffix in AUDIO_EXTENSIONS:
-        ext = resolve_audio_extension(source, output_format)
+        ext = resolve_audio_extension(source, fmt)
+        stem = source.stem
+        orig_ext = suffix
+    elif suffix in FONT_EXTENSIONS:
+        ext = resolve_font_extension(source, fmt)
+        stem = source.stem
+        orig_ext = suffix
+    elif suffix in PDF_EXTENSIONS:
+        ext = source.suffix
+        stem = source.stem
+        orig_ext = suffix
     else:
-        ext = source.suffix if output_format == "keep" else f".{output_format.lower()}"
+        ext = source.suffix if fmt == "keep" else f".{fmt}"
+        stem = source.stem
+        orig_ext = suffix
 
     if in_place:
-        return source if ext.lower() == source.suffix.lower() else source.with_suffix(ext)
+        if ext.lower() == orig_ext.lower():
+            return source
+        return source.with_name(f"{stem}{ext}")
 
     if output is not None:
         out_resolved = output.expanduser().resolve()
         if multi_mode or out_resolved.is_dir() or str(output).endswith(("/", "\\")):
             out_resolved.mkdir(parents=True, exist_ok=True)
-            return out_resolved / f"{source.stem}{ext}"
+            return out_resolved / f"{stem}{ext}"
         return out_resolved if out_resolved.suffix else out_resolved.with_suffix(ext)
 
-    return source.with_name(f"{source.stem}_compressed{ext}")
+    return source.with_name(f"{stem}_compressed{ext}")
 
 
 def _interactive_wizard() -> tuple:
     """Prompt the user interactively when launched without file/folder arguments."""
     console.print(
         Panel.fit(
-            "[bold cyan]All-in-One CLI Compressor (PDF • Image • Video • Audio)[/bold cyan]",
+            "[bold cyan]All-in-One CLI Compressor[/bold cyan]\n"
+            "[dim]PDF • Image (AVIF/HEIC/GIF) • Video • Audio • SVG • Office • Fonts • Archives[/dim]",
             border_style="cyan",
         )
     )
@@ -108,18 +219,23 @@ def _interactive_wizard() -> tuple:
 
     recursive = False
     kind = "all"
+    output_format = "keep"
     if target_path.is_dir():
-        recursive = Confirm.ask("Scan subfolders recursively?", default=False)
-        kind = Prompt.ask(
-            "Filter file type",
-            choices=["all", "pdf", "image", "video", "audio"],
-            default="all",
-        )
+        bundle_dir = Confirm.ask("Bundle entire folder into a single compressed archive?", default=False)
+        if bundle_dir:
+            output_format = Prompt.ask(
+                "Archive format",
+                choices=["tar.zst", "zip", "tar.gz", "tar.xz"],
+                default="tar.zst",
+            )
+        else:
+            recursive = Confirm.ask("Scan subfolders recursively?", default=False)
+            kind = Prompt.ask("Filter file type", choices=MEDIA_TYPE_CHOICES, default="all")
 
     preset = Prompt.ask("Compression preset", choices=["low", "medium", "high"], default="medium")
     target_size_raw = Prompt.ask("Max target size (e.g. 500KB, 5MB, or Enter to skip)", default="").strip()
     target_size = target_size_raw or None
-    in_place = Confirm.ask("Overwrite original file(s) in-place?", default=False)
+    in_place = False if target_path.is_dir() and output_format != "keep" else Confirm.ask("Overwrite original file(s) in-place?", default=False)
 
     out_path: Optional[Path] = None
     if not in_place:
@@ -127,7 +243,7 @@ def _interactive_wizard() -> tuple:
         if out_raw:
             out_path = Path(out_raw)
 
-    return (target_path,), preset, None, None, None, None, "keep", "h264", None, target_size, kind, out_path, in_place, recursive
+    return (target_path,), preset, None, None, None, None, output_format, "h264", None, target_size, kind, out_path, in_place, recursive
 
 
 def _render_summary(results: list[CompressionResult], failures: list[tuple[Path, str]]) -> None:
@@ -162,7 +278,7 @@ def _render_summary(results: list[CompressionResult], failures: list[tuple[Path,
         total_saved = total_orig - total_new
         total_pct = (total_saved / total_orig * 100.0) if total_orig else 0.0
         console.print(
-            f"[bold green]Done:[/bold green] {len(results)} file(s) | "
+            f"[bold green]Done:[/bold green] {len(results)} item(s) | "
             f"{format_size(total_orig)} -> {format_size(total_new)} "
             f"([bold]{format_size(total_saved)} saved, {total_pct:.1f}%[/bold])"
         )
@@ -183,18 +299,18 @@ def _render_summary(results: list[CompressionResult], failures: list[tuple[Path,
     show_default=True,
     help="Compression strength: low (best quality), medium (balanced), high (smallest size).",
 )
-@click.option("-q", "--quality", type=click.IntRange(1, 100), default=None, help="Custom image/PDF quality (1-100).")
+@click.option("-q", "--quality", type=click.IntRange(1, 100), default=None, help="Custom image/PDF/Office quality (1-100).")
 @click.option("--dpi", type=click.IntRange(36, 600), default=None, help="Custom PDF image DPI.")
-@click.option("--max-width", type=click.IntRange(16, 20000), default=None, help="Max image/video width in px.")
-@click.option("--max-height", type=click.IntRange(16, 20000), default=None, help="Max image/video height in px.")
+@click.option("--max-width", type=click.IntRange(16, 20000), default=None, help="Max image/video/Office-media width in px.")
+@click.option("--max-height", type=click.IntRange(16, 20000), default=None, help="Max image/video/Office-media height in px.")
 @click.option(
     "-f",
     "--format",
     "output_format",
-    type=click.Choice(["keep", "jpg", "jpeg", "png", "webp", "avif", "mp4", "webm", "mp3", "aac", "m4a", "ogg", "opus"], case_sensitive=False),
+    type=click.Choice(FORMAT_CHOICES, case_sensitive=False),
     default="keep",
     show_default=True,
-    help="Convert image/video/audio output format.",
+    help="Convert output format (image/video/audio/office/font/archive).",
 )
 @click.option(
     "--video-codec",
@@ -208,10 +324,10 @@ def _render_summary(results: list[CompressionResult], failures: list[tuple[Path,
 @click.option(
     "--type",
     "kind",
-    type=click.Choice(["all", "pdf", "image", "video", "audio"], case_sensitive=False),
+    type=click.Choice(MEDIA_TYPE_CHOICES, case_sensitive=False),
     default="all",
     show_default=True,
-    help="Filter media type when compressing folders.",
+    help="Filter asset type when compressing folders.",
 )
 @click.option("-o", "--output", type=click.Path(path_type=Path), default=None, help="Output file or directory.")
 @click.option("--in-place", is_flag=True, help="Replace original files in-place.")
@@ -234,7 +350,7 @@ def main(
     recursive: bool,
     allow_larger: bool,
 ) -> None:
-    """Compress PDF, Image, Video, and Audio files from the command line."""
+    """Compress PDF, Image (AVIF/HEIC/GIF), Video, Audio, SVG, Office, Font, and Archive files."""
     if not inputs:
         (
             inputs,
@@ -267,12 +383,13 @@ def main(
             console.print(f"[red]{exc}[/red]")
             sys.exit(2)
 
-    files = _collect_files(inputs, recursive=recursive, kind=kind.lower())
-    if not files:
-        console.print("[yellow]No supported PDF, image, video, or audio files found.[/yellow]")
+    fmt_lower = output_format.lower()
+    targets = _collect_inputs(inputs, recursive=recursive, kind=kind.lower(), output_format=fmt_lower)
+    if not targets:
+        console.print("[yellow]No supported files found.[/yellow]")
         sys.exit(1)
 
-    multi_mode = len(files) > 1
+    multi_mode = len(targets) > 1
     results: list[CompressionResult] = []
     failures: list[tuple[Path, str]] = []
 
@@ -283,13 +400,23 @@ def main(
         TextColumn("{task.completed}/{task.total}"),
         console=console,
     ) as progress:
-        task_id = progress.add_task("Compressing files...", total=len(files))
-        for src in files:
+        task_id = progress.add_task("Compressing...", total=len(targets))
+        for src in targets:
             progress.update(task_id, description=f"Compressing {src.name}")
             ext = src.suffix.lower()
-            dest = _resolve_destination(src, output, in_place, output_format.lower(), multi_mode)
+            dest = _resolve_destination(src, output, in_place, fmt_lower, multi_mode)
             try:
-                if ext in PDF_EXTENSIONS:
+                if src.is_dir():
+                    res = compress_directory(src, dest, preset=preset.lower(), output_format=fmt_lower)
+                elif fmt_lower in ARCHIVE_OUTPUT_FORMATS or is_archive_path(src):
+                    res = compress_archive(
+                        src,
+                        dest,
+                        preset=preset.lower(),
+                        output_format=fmt_lower,
+                        keep_smaller=not allow_larger,
+                    )
+                elif ext in PDF_EXTENSIONS:
                     res = compress_pdf(
                         src,
                         dest,
@@ -299,7 +426,24 @@ def main(
                         target_bytes=target_bytes,
                         keep_smaller=not allow_larger,
                     )
-                elif ext in VIDEO_EXTENSIONS:
+                elif ext in OFFICE_EXTENSIONS:
+                    res = compress_office(
+                        src,
+                        dest,
+                        preset=preset.lower(),
+                        quality=quality,
+                        max_width=max_width,
+                        max_height=max_height,
+                        dpi=dpi,
+                        output_format=fmt_lower,
+                        target_bytes=target_bytes,
+                        keep_smaller=not allow_larger,
+                    )
+                elif ext in SVG_EXTENSIONS:
+                    res = compress_svg(src, dest, preset=preset.lower(), keep_smaller=not allow_larger)
+                elif ext in FONT_EXTENSIONS:
+                    res = compress_font(src, dest, output_format=fmt_lower, keep_smaller=not allow_larger)
+                elif ext in VIDEO_EXTENSIONS or (ext == ".gif" and fmt_lower in ("mp4", "webm")):
                     res = compress_video(
                         src,
                         dest,
@@ -316,7 +460,7 @@ def main(
                         dest,
                         preset=preset.lower(),
                         bitrate_kbps=audio_bitrate,
-                        output_format=output_format.lower(),
+                        output_format=fmt_lower,
                         target_bytes=target_bytes,
                         keep_smaller=not allow_larger,
                     )
@@ -328,7 +472,7 @@ def main(
                         preset=preset.lower(),
                         max_width=max_width,
                         max_height=max_height,
-                        output_format=output_format.lower(),
+                        output_format=fmt_lower,
                         target_bytes=target_bytes,
                         keep_smaller=not allow_larger,
                     )

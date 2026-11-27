@@ -1,4 +1,9 @@
 click>=8.1.0
 Pillow>=10.0.0
+pillow-heif>=0.18.0
 PyMuPDF>=1.24.0
 rich>=13.0.0
+scour>=0.38.2
+fonttools>=4.50.0
+brotli>=1.1.0
+zstandard>=0.23.0
