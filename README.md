@@ -117,6 +117,9 @@ pip install -r requirements.txt
 ## Usage Examples
 
 ```bash
+# Show full colorful cheat sheet with all flags, formats, and examples
+python main.py help
+
 # Interactive wizard (prompts for file/folder, preset, target size, output mode)
 python main.py
 

@@ -202,6 +202,81 @@ def _resolve_destination(
     return source.with_name(f"{stem}_compressed{ext}")
 
 
+def _print_cheat_sheet() -> None:
+    """Print a full colorful cheat sheet with all CLI flags, formats, and usage examples."""
+    console.print(
+        Panel.fit(
+            "[bold cyan]JBSI All-in-One CLI Compressor — Cheat Sheet[/bold cyan]  [dim]by Jaspreet Bhatia[/dim]\n"
+            "[dim]Usage: python main.py <file_or_folder> [OPTIONS]   |   Run without args for interactive mode[/dim]",
+            border_style="cyan",
+        )
+    )
+
+    flags = Table(title="All Flags & Options", show_lines=False, header_style="bold white on blue")
+    flags.add_column("Flag", style="cyan", no_wrap=True)
+    flags.add_column("Values / Default", style="yellow")
+    flags.add_column("What it does")
+
+    rows = [
+        ("INPUTS", "./file.pdf, ./xyz ...", "One or more files or folders (omit for interactive wizard)"),
+        ("help / -h / --help", "shortcut", "Show this full cheat sheet ('help') or brief CLI syntax ('-h')"),
+        ("-p, --preset", "low | medium* | high", "Compression level: low (best quality), medium (balanced), high (smallest)"),
+        ("-t, --target-size", "e.g. 500KB, 2MB", "Auto-tune compression to stay under target file size"),
+        ("-f, --format", "keep* | avif | webp | ...", "Convert format (jpg/png/webp/avif/heic/gif/mp4/webm/mp3/aac/m4a/ogg/opus/pdf/woff/woff2/zip/tar.gz/tar.bz2/tar.xz/tar.zst/gz/bz2/xz/zst)"),
+        ("-q, --quality", "1-100", "Custom quality for images, PDFs, and Office embedded images"),
+        ("--dpi", "36-600", "Custom image DPI inside PDFs"),
+        ("--max-width", "16-20000 px", "Cap max width (images, GIFs, videos, Office media) keeping aspect ratio"),
+        ("--max-height", "16-20000 px", "Cap max height (images, GIFs, videos, Office media) keeping aspect ratio"),
+        ("--video-codec", "h264* | h265", "Video encoder codec (h265 yields smaller MP4/MOV/MKV files)"),
+        ("--audio-bitrate", "24-320 kbps", "Custom audio bitrate in kbps"),
+        ("--type", "all* | pdf | image | ...", "Filter folder scans: all, pdf, image, video, audio, svg, office, font, archive"),
+        ("-o, --output", "./out/ or out.ext", "Custom output file or folder (default: *_compressed next to input)"),
+        ("-r, --recursive", "flag", "Scan subfolders recursively when passing a directory like ./xyz"),
+        ("--in-place", "flag", "Overwrite original files atomically instead of creating *_compressed"),
+        ("--allow-larger", "flag", "Keep output even if larger than original (disables zero-bloat guard)"),
+    ]
+    for flag, val, desc in rows:
+        flags.add_row(flag, val, desc)
+    console.print(flags)
+
+    formats = Table(title="Supported File Types", show_lines=False, header_style="bold white on dark_green")
+    formats.add_column("Type (--type)", style="green", no_wrap=True)
+    formats.add_column("Extensions", style="white")
+    formats.add_column("Notes", style="dim")
+    formats.add_row("pdf", ".pdf", "Ghostscript + PyMuPDF image downsampling")
+    formats.add_row("image", ".jpg .jpeg .png .webp .avif .heic .heif .gif .bmp .tiff", "HEIC & AVIF conversion, FFmpeg palettegen for GIF")
+    formats.add_row("video", ".mp4 .mov .mkv .avi .webm .m4v .flv", "FFmpeg H.264/H.265/VP9 + .gif -> .mp4/.webm")
+    formats.add_row("audio", ".mp3 .wav .flac .aac .m4a .ogg .opus", "Lossless .wav/.flac default to .mp3")
+    formats.add_row("svg", ".svg", "Scour vector optimizer (strips metadata & comments)")
+    formats.add_row("office", ".docx .pptx .xlsx .odt .odp .ods", "Shrinks embedded media keeping file editable (or -f pdf)")
+    formats.add_row("font", ".ttf .otf .woff .woff2", "FontTools + Brotli (.ttf/.otf default to .woff2)")
+    formats.add_row("archive", ".zip .tar .tar.gz .tar.bz2 .tar.xz .tar.zst .gz .bz2 .xz .zst", "Re-packs archives or bundles folders (./xyz -f tar.zst)")
+    console.print(formats)
+
+    examples = (
+        "[bold yellow]Quick Examples:[/bold yellow]\n"
+        "  [cyan]python main.py[/cyan]                                     # Start interactive wizard\n"
+        "  [cyan]python main.py report.pdf -t 2MB[/cyan]                   # Shrink PDF under 2 MB\n"
+        "  [cyan]python main.py photo.heic -p medium -f avif[/cyan]        # Convert iPhone HEIC -> tiny AVIF\n"
+        "  [cyan]python main.py pic.png --max-width 1920 -f webp[/cyan]    # Resize + convert PNG -> WebP\n"
+        "  [cyan]python main.py anim.gif -p high[/cyan]                    # Shrink animated GIF\n"
+        "  [cyan]python main.py anim.gif -f mp4[/cyan]                     # Convert GIF -> tiny MP4 video\n"
+        "  [cyan]python main.py clip.mp4 --max-height 720 --video-codec h265[/cyan]\n"
+        "  [cyan]python main.py clip.mp4 -t 10MB[/cyan]                    # Fit video under 10 MB\n"
+        "  [cyan]python main.py recording.wav -p high[/cyan]               # Convert WAV -> 64kbps MP3\n"
+        "  [cyan]python main.py slides.pptx -p medium[/cyan]               # Shrink images inside PPTX/DOCX/XLSX\n"
+        "  [cyan]python main.py logo.svg -p high[/cyan]                    # Minify SVG vector\n"
+        "  [cyan]python main.py Inter.ttf[/cyan]                           # Compress TTF font -> WOFF2\n"
+        "  [cyan]python main.py ./xyz -r -o ./compressed/[/cyan]           # Compress everything in folder ./xyz\n"
+        "  [cyan]python main.py ./xyz -r --type image -f avif -p high[/cyan]\n"
+        "  [cyan]python main.py ./xyz -f tar.zst[/cyan]                    # Bundle entire ./xyz folder into .tar.zst\n"
+        "  [cyan]python main.py backup.zip -f tar.zst -p high[/cyan]       # Convert ZIP -> smaller .tar.zst\n"
+        "  [cyan]python main.py ./xyz -r --in-place[/cyan]                 # Replace originals safely in-place\n"
+        "\n[dim]* denotes default value[/dim]"
+    )
+    console.print(Panel(examples, title="Common Ways to Compress", border_style="green"))
+
+
 def _interactive_wizard() -> tuple:
     """Prompt the user interactively when launched without file/folder arguments."""
     console.print(
@@ -211,7 +286,12 @@ def _interactive_wizard() -> tuple:
             border_style="cyan",
         )
     )
-    raw_path = Prompt.ask("Enter file or folder path").strip().strip('"').strip("'")
+    while True:
+        raw_path = Prompt.ask("Enter file or folder path (or 'help' for flags & examples)").strip().strip('"').strip("'")
+        if raw_path.lower() in ("help", "?"):
+            _print_cheat_sheet()
+            continue
+        break
     target_path = Path(raw_path).expanduser()
     if not target_path.exists():
         console.print(f"[red]Path not found:[/red] {target_path}")
@@ -289,7 +369,10 @@ def _render_summary(results: list[CompressionResult], failures: list[tuple[Path,
             console.print(f"  - {path}: {err}")
 
 
-@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.command(
+    context_settings={"help_option_names": ["-h", "--help"]},
+    epilog="Tip: Run 'python main.py help' for a full cheat sheet of all flags, formats, and examples.",
+)
 @click.argument("inputs", nargs=-1, type=click.Path(path_type=Path))
 @click.option(
     "-p",
@@ -351,6 +434,10 @@ def main(
     allow_larger: bool,
 ) -> None:
     """Compress PDF, Image (AVIF/HEIC/GIF), Video, Audio, SVG, Office, Font, and Archive files."""
+    if len(inputs) == 1 and str(inputs[0]).lower() in ("help", "?") and not inputs[0].expanduser().exists():
+        _print_cheat_sheet()
+        return
+
     if not inputs:
         (
             inputs,
