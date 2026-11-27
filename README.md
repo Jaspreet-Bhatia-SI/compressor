@@ -8,10 +8,10 @@
 
 **One modular Python CLI to shrink PDFs, images (AVIF / HEIC / WebP / GIF), videos, audio, SVGs, Office decks/docs, web fonts, and archives — with automatic target-size fitting and zero bloat guarantees.**
 
+[![Compress Online (Browser)](https://img.shields.io/badge/Compress%20Online-GitHub%20Pages%20(Zero%20Upload)-10B981?style=for-the-badge&logo=googlechrome&logoColor=white)](https://jaspreet-bhatia-si.github.io/compressor/)
+[![Full Web Studio](https://img.shields.io/badge/Full%20Web%20Studio-FastAPI%20%2B%20Docker-38BDF8?style=for-the-badge&logo=fastapi&logoColor=white)](#web-ui-full-python-server--browser-app)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Formats](https://img.shields.io/badge/Formats-35%2B-10B981?style=for-the-badge)](#supported-formats--engines)
-[![Modular](https://img.shields.io/badge/Architecture-8%20Modules-818CF8?style=for-the-badge)](#architecture--pipeline)
-[![CLI](https://img.shields.io/badge/Interface-Interactive%20%2B%20Batch-38BDF8?style=for-the-badge)](#usage-examples)
+[![Formats](https://img.shields.io/badge/Formats-35%2B-818CF8?style=for-the-badge)](#supported-formats--engines)
 
 </div>
 
@@ -80,6 +80,7 @@ flowchart TD
 ```text
 compressor/
 ├── main.py                 # Unified CLI, interactive wizard, progress bar & Rich summary
+├── app.py                  # Full-stack FastAPI Web Studio (local / Docker / Hugging Face Spaces)
 ├── common.py               # Shared types, size parser/formatter, ffprobe, atomic size guard
 ├── pdf_compressor.py       # Ghostscript + PyMuPDF compressor
 ├── image_compressor.py     # Pillow, AVIF, HEIC/HEIF & animated GIF compressor
@@ -89,8 +90,31 @@ compressor/
 ├── office_compressor.py    # Editable Office media optimizer & PDF exporter
 ├── font_compressor.py      # TTF/OTF -> WOFF2 Brotli font compressor
 ├── archive_compressor.py   # Archive re-compressor & folder bundler
+├── web/                    # Dark glassmorphic UI served by app.py
+├── docs/                   # 100% browser-local Web App deployed on GitHub Pages
+├── Dockerfile              # Container build for Hugging Face Spaces / Render / Docker
 ├── requirements.txt        # Python dependencies
 └── assets/                 # Animated SVG banner & terminal demo
+```
+
+---
+
+## Web UI (Full Python Server & Browser App)
+
+Use either mode depending on your workflow:
+
+1. **Instant Browser App (GitHub Pages — Zero Upload):**
+   Click **[Compress Online Now](https://jaspreet-bhatia-si.github.io/compressor/)** to compress **Images (`JPG`, `PNG`, `WebP`, `AVIF`), `SVG`, `PPTX`/`DOCX`/`XLSX` embedded media, and `ZIP` archives** completely inside your browser — files never leave your device.
+2. **Full Python Web Studio (`app.py` — All 35+ Formats):**
+   Run locally or deploy the included [`Dockerfile`](Dockerfile) directly on **Hugging Face Spaces** (Docker SDK on port `7860`), Render, or Railway to get drag-and-drop upload for **PDF, HEIC, GIF, Video, Audio, WOFF2, and Zstd**:
+
+```bash
+# Run locally inside venv
+uvicorn app:app --host 0.0.0.0 --port 7860
+
+# Or via Docker
+docker build -t all-in-one-compressor .
+docker run -p 7860:7860 all-in-one-compressor
 ```
 
 ---
