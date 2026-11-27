@@ -1,14 +1,14 @@
 <div align="center">
 
-<img src="assets/hero-banner.svg" alt="JBSI™ All-in-One CLI Compressor Banner" width="100%"/>
+<img src="assets/hero-banner.svg" alt="JBSI All-in-One CLI Compressor Banner" width="100%"/>
 
 <br/><br/>
 
-# JBSI™ All-in-One Compressor
+# JBSI All-in-One Compressor
 
-**Built by [Jaspreet Bhatia](https://github.com/Jaspreet-Bhatia-SI) (`JBSI™`) — one modular CLI + Web Studio to shrink PDFs, images (AVIF / HEIC / WebP / GIF), videos, audio, SVGs, Office decks/docs, web fonts, and archives with automatic target-size fitting and zero-bloat guarantees.**
+**Built by [Jaspreet Bhatia](https://github.com/Jaspreet-Bhatia-SI) (`JBSI`) — one modular CLI + Web Studio to shrink PDFs, images (AVIF / HEIC / WebP / GIF), videos, audio, SVGs, Office decks/docs, web fonts, and archives with automatic target-size fitting and zero-bloat guarantees.**
 
-[![JBSI™](https://img.shields.io/badge/Brand-JBSI™-0EA5E9?style=for-the-badge)](https://github.com/Jaspreet-Bhatia-SI)
+[![JBSI](https://img.shields.io/badge/Brand-JBSI-0EA5E9?style=for-the-badge)](https://github.com/Jaspreet-Bhatia-SI)
 [![Author](https://img.shields.io/badge/Author-Jaspreet%20Bhatia-F59E0B?style=for-the-badge)](https://github.com/Jaspreet-Bhatia-SI)
 [![Compress Online (Browser)](https://img.shields.io/badge/Compress%20Online-GitHub%20Pages%20(Zero%20Upload)-10B981?style=for-the-badge&logo=googlechrome&logoColor=white)](https://jaspreet-bhatia-si.github.io/compressor/)
 [![Full Web Studio](https://img.shields.io/badge/Full%20Web%20Studio-FastAPI%20%2B%20Docker-38BDF8?style=for-the-badge&logo=fastapi&logoColor=white)](#web-ui-full-python-server--browser-app)
@@ -96,7 +96,7 @@ compressor/
 ├── web/                    # Dark glassmorphic UI served by app.py
 ├── docs/                   # 100% browser-local Web App deployed on GitHub Pages
 ├── Dockerfile              # Container build for Hugging Face Spaces / Render / Docker
-├── LICENSE                 # MIT License & JBSI™ Trademark Notice
+├── LICENSE                 # MIT License & JBSI Trademark Notice
 ├── requirements.txt        # Python dependencies
 └── assets/                 # Animated SVG banner & terminal demo
 ```
@@ -202,8 +202,8 @@ python main.py ./media -r --type image -f avif -o ./out/
 
 <div align="center">
 
-**JBSI™** — Designed & Built by **[Jaspreet Bhatia](https://github.com/Jaspreet-Bhatia-SI)**
+**JBSI** — Designed & Built by **[Jaspreet Bhatia](https://github.com/Jaspreet-Bhatia-SI)**
 
-*Copyright &copy; 2026 Jaspreet Bhatia (`JBSI™`). Licensed under the [MIT License](LICENSE).*
+*Copyright &copy; 2026 Jaspreet Bhatia (`JBSI`). Licensed under the [MIT License](LICENSE).*
 
 </div>
