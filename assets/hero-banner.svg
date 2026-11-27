@@ -98,6 +98,6 @@
 
   <!-- Bottom status strip -->
   <text x="48" y="218" fill="#64748b" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
-    JBSI  •  Jaspreet Bhatia   |   ✓ Target-size solver (-t 500KB)   ✓ Zero-bloat size guard   ✓ CLI + Web UI
+    JBSI  •  Jaspreet Bhatia   |   ✓ Target-size solver (-t 500KB)   ✓ Zero-bloat size guard   ✓ Interactive &amp; Batch CLI
   </text>
 </svg>
