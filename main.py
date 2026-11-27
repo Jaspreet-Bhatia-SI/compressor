@@ -497,9 +497,7 @@ def _interactive_wizard() -> tuple:
 
     preset = "medium"
     target_size: Optional[str] = None
-    use_slider = False
-    if target_path.is_file():
-        use_slider = Confirm.ask("Check minimum possible size & set reduction % with slider?", default=True)
+    use_slider = target_path.is_file()
     if not use_slider:
         preset = Prompt.ask("Compression preset", choices=["low", "medium", "high"], default="medium")
         target_size_raw = Prompt.ask("Max target size (e.g. 500KB, 5MB, 45%, or Enter to skip)", default="").strip()
