@@ -215,7 +215,7 @@ def _print_cheat_sheet() -> None:
     """Print a full colorful cheat sheet with all CLI flags, formats, and usage examples."""
     console.print(
         Panel.fit(
-            "[bold cyan]JBSI All-in-One CLI Compressor — Cheat Sheet[/bold cyan]  [dim]by Jaspreet Bhatia[/dim]\n"
+            "[bold cyan]JBSI File Compressor & Format Converter — Cheat Sheet[/bold cyan]  [dim]by Jaspreet Bhatia[/dim]\n"
             "[dim]Usage: python main.py <file_or_folder> [OPTIONS]   |   Run without args for interactive mode[/dim]",
             border_style="cyan",
         )
@@ -493,7 +493,7 @@ def _interactive_wizard() -> tuple:
     """Prompt the user interactively when launched without file/folder arguments."""
     console.print(
         Panel.fit(
-            "[bold cyan]JBSI All-in-One CLI Compressor[/bold cyan]  [dim]by Jaspreet Bhatia[/dim]\n"
+            "[bold cyan]JBSI File Compressor & Format Converter[/bold cyan]  [dim]by Jaspreet Bhatia[/dim]\n"
             "[dim]PDF • Image (AVIF/HEIC/GIF) • Video • Audio • SVG • Office • Fonts • Archives[/dim]",
             border_style="cyan",
         )
@@ -653,7 +653,7 @@ def main(
     recursive: bool,
     allow_larger: bool,
 ) -> None:
-    """Compress PDF, Image (AVIF/HEIC/GIF), Video, Audio, SVG, Office, Font, and Archive files."""
+    """Compress and convert PDF, Image (AVIF/HEIC/GIF), Video, Audio, SVG, Office, Font, and Archive files."""
     if len(inputs) == 1 and str(inputs[0]).lower() in ("help", "?") and not inputs[0].expanduser().exists():
         _print_cheat_sheet()
         return

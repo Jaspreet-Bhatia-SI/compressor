@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="assets/hero-banner.svg" alt="JBSI All-in-One CLI Compressor Banner" width="100%"/>
+<img src="assets/hero-banner.svg" alt="JBSI File Compressor & Format Converter Banner" width="100%"/>
 
 <br/><br/>
 
-# JBSI All-in-One Compressor
+# JBSI File Compressor & Format Converter
 
-**Built by [Jaspreet Bhatia](https://github.com/Jaspreet-Bhatia-SI) (`JBSI`) — one modular Python CLI to shrink PDFs, images (AVIF / HEIC / WebP / GIF), videos, audio, SVGs, Office decks/docs, web fonts, and archives with automatic target-size fitting and zero-bloat guarantees.**
+**Built by [Jaspreet Bhatia](https://github.com/Jaspreet-Bhatia-SI) (`JBSI`) — a modular file compression & format conversion CLI + browser tool for PDFs, images (AVIF / HEIC / WebP / GIF), videos, audio, SVGs, Office decks/docs, web fonts, and archives with an interactive size slider and zero-bloat guarantees.**
 
 [![JBSI](https://img.shields.io/badge/Brand-JBSI-0EA5E9?style=for-the-badge)](https://github.com/Jaspreet-Bhatia-SI)
 [![Author](https://img.shields.io/badge/Author-Jaspreet%20Bhatia-F59E0B?style=for-the-badge)](https://github.com/Jaspreet-Bhatia-SI)

@@ -1,5 +1,5 @@
 {
-  "name": "JBSI All-in-One CLI Compressor",
+  "name": "JBSI File Compressor & Format Converter",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {}
