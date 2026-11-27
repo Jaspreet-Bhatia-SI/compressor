@@ -45,7 +45,7 @@ JOBS_ROOT = Path(tempfile.gettempdir()) / "compressor_web_jobs"
 JOBS_ROOT.mkdir(parents=True, exist_ok=True)
 JOBS: dict[str, dict] = {}
 
-app = FastAPI(title="All-in-One Compressor", version="2.0.0")
+app = FastAPI(title="JBSI™ All-in-One Compressor", version="2.0.0")
 
 WEB_DIR = PROJECT_DIR / "web"
 if WEB_DIR.exists():

@@ -206,7 +206,7 @@ def _interactive_wizard() -> tuple:
     """Prompt the user interactively when launched without file/folder arguments."""
     console.print(
         Panel.fit(
-            "[bold cyan]All-in-One CLI Compressor[/bold cyan]\n"
+            "[bold cyan]JBSI™ All-in-One CLI Compressor[/bold cyan]  [dim]by Jaspreet Bhatia[/dim]\n"
             "[dim]PDF • Image (AVIF/HEIC/GIF) • Video • Audio • SVG • Office • Fonts • Archives[/dim]",
             border_style="cyan",
         )
