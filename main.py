@@ -504,13 +504,8 @@ def _interactive_wizard() -> tuple:
         preset = Prompt.ask("Compression preset", choices=["low", "medium", "high"], default="medium")
         target_size_raw = Prompt.ask("Max target size (e.g. 500KB, 5MB, 45%, or Enter to skip)", default="").strip()
         target_size = target_size_raw or None
-    in_place = False if target_path.is_dir() and output_format != "keep" else Confirm.ask("Overwrite original file(s) in-place?", default=False)
-
+    in_place = False
     out_path: Optional[Path] = None
-    if not in_place:
-        out_raw = Prompt.ask("Output file/folder path (Enter for *_compressed next to source)", default="").strip()
-        if out_raw:
-            out_path = Path(out_raw)
 
     return (target_path,), preset, None, None, None, None, output_format, "h264", None, target_size, None, use_slider, kind, out_path, in_place, recursive
 
