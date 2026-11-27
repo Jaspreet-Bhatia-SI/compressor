@@ -87,6 +87,25 @@
         </label>
       </div>
 
+      <section class="slider-box" id="sliderBox" hidden>
+        <div class="slider-head">
+          <div>
+            <strong>Size Reduction Slider</strong>
+            <p class="slider-meta" id="sliderMeta">Analyzing smallest possible size...</p>
+          </div>
+          <label class="slider-toggle">
+            <input type="checkbox" id="useSliderToggle" />
+            <span>Apply Slider %</span>
+          </label>
+        </div>
+        <div class="slider-track-row">
+          <span class="slider-bound" id="sliderMinLabel">1% min</span>
+          <input type="range" id="sizeSlider" min="1" max="100" value="65" />
+          <span class="slider-bound">100%</span>
+        </div>
+        <div class="slider-readout" id="sliderReadout">Move slider to pick target % of original size</div>
+      </section>
+
       <div class="action-bar">
         <div class="status-group">
           <span id="statusText" class="status-text">Ready — select or drop files to begin</span>

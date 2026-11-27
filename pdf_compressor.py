@@ -141,3 +141,20 @@ def compress_pdf(
         tmp_best.unlink(missing_ok=True)
         tmp_gs.unlink(missing_ok=True)
         tmp_mupdf.unlink(missing_ok=True)
+
+
+def estimate_min_pdf_bytes(source: Path) -> int:
+    """Probe the smallest achievable PDF size using aggressive downsampling."""
+    orig_size = source.stat().st_size
+    tmp_gs = make_temp_path(source, ".min.gs.pdf")
+    tmp_mu = make_temp_path(source, ".min.mu.pdf")
+    try:
+        sizes = [orig_size]
+        if _run_ghostscript(source, tmp_gs, "/screen", 50):
+            sizes.append(tmp_gs.stat().st_size)
+        if _run_pymupdf(source, tmp_mu, 50, 22):
+            sizes.append(tmp_mu.stat().st_size)
+        return max(1, min(sizes))
+    finally:
+        tmp_gs.unlink(missing_ok=True)
+        tmp_mu.unlink(missing_ok=True)

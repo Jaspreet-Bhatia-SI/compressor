@@ -40,7 +40,7 @@ def parse_size(size_str: str) -> int:
     match = re.fullmatch(r"(\d+(?:\.\d+)?)\s*(B|KB|K|MB|M|GB|G)?", cleaned)
     if not match:
         raise ValueError(
-            f"Invalid size format '{size_str}'. Use values like '500KB', '2MB', or '1048576'."
+            f"Invalid size format '{size_str}'. Use values like '500KB', '2MB', or '45%'."
         )
     value = float(match.group(1))
     unit = match.group(2) or "B"
@@ -54,6 +54,21 @@ def parse_size(size_str: str) -> int:
         "GB": 1024**3,
     }
     return int(value * multipliers[unit])
+
+
+def parse_target_spec(spec: str, original_bytes: int) -> int:
+    """Parse an absolute size ('500KB') or percentage of original ('45%') into target bytes."""
+    cleaned = spec.strip()
+    if cleaned.endswith("%"):
+        pct_raw = cleaned[:-1].strip()
+        try:
+            pct = float(pct_raw)
+        except ValueError as exc:
+            raise ValueError(f"Invalid percentage '{spec}'. Use e.g. '45%'.") from exc
+        if not (1 <= pct <= 100):
+            raise ValueError(f"Percentage '{spec}' must be between 1% and 100%.")
+        return max(1, int(original_bytes * (pct / 100.0)))
+    return parse_size(cleaned)
 
 
 def format_size(num_bytes: int) -> str:

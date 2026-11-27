@@ -8,6 +8,14 @@
   const downloadAllBtn = document.getElementById("downloadAllBtn");
   const statusText = document.getElementById("statusText");
   const resultsDiv = document.getElementById("results");
+  const sliderBox = document.getElementById("sliderBox");
+  const sliderMeta = document.getElementById("sliderMeta");
+  const sliderMinLabel = document.getElementById("sliderMinLabel");
+  const sizeSlider = document.getElementById("sizeSlider");
+  const sliderReadout = document.getElementById("sliderReadout");
+  const useSliderToggle = document.getElementById("useSliderToggle");
+  const imageFormatSelect = document.getElementById("imageFormat");
+  const maxWidthInput = document.getElementById("maxWidth");
 
   const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp", "avif", "bmp"]);
   const OFFICE_EXTS = new Set(["docx", "pptx", "xlsx", "odt", "odp", "ods"]);
@@ -233,7 +241,91 @@
     compressBtn.disabled = empty;
     zipBundleBtn.disabled = empty;
     clearBtn.disabled = empty;
+    refreshSliderEstimate();
   }
+
+  let activeOrigBytes = 0;
+  let activeMinBytes = 0;
+
+  function updateSliderReadout() {
+    if (!activeOrigBytes) return;
+    const pct = parseInt(sizeSlider.value, 10);
+    const estBytes = Math.max(activeMinBytes, Math.floor(activeOrigBytes * (pct / 100)));
+    const savedPct = Math.max(0, 100 - pct);
+    sliderReadout.textContent = `Target: ${pct}% of original (~${formatBytes(estBytes)} • ${savedPct}% reduction)`;
+  }
+
+  async function probeFileMinimum(file, requestedFmt, maxWidth) {
+    const { ext } = splitName(file.name);
+    if (IMAGE_EXTS.has(ext)) {
+      const targetFmt = requestedFmt === "keep" ? (ext === "bmp" ? "png" : ext) : requestedFmt;
+      const bitmap = await createImageBitmap(file);
+      try {
+        const baseW = maxWidth ? Math.min(bitmap.width, maxWidth) : bitmap.width;
+        const minW = Math.max(16, Math.round(baseW * 0.4));
+        const encoded = await encodeImageBlob(bitmap, targetFmt, 0.18, minW);
+        return Math.min(file.size, encoded.blob.size);
+      } finally {
+        bitmap.close();
+      }
+    }
+    if (ext === "svg") {
+      const res = await compressSvgFile(file, "high");
+      return res.blob.size;
+    }
+    if (ext === "zip" || OFFICE_EXTS.has(ext)) {
+      const res = await compressZipOrOffice(file, ext, "high");
+      return res.blob.size;
+    }
+    return file.size;
+  }
+
+  async function refreshSliderEstimate() {
+    if (queue.length !== 1) {
+      sliderBox.hidden = true;
+      useSliderToggle.checked = false;
+      activeOrigBytes = 0;
+      activeMinBytes = 0;
+      return;
+    }
+    const file = queue[0];
+    const { ext } = splitName(file.name);
+    if (!IMAGE_EXTS.has(ext) && ext !== "svg" && ext !== "zip" && !OFFICE_EXTS.has(ext)) {
+      sliderBox.hidden = true;
+      useSliderToggle.checked = false;
+      return;
+    }
+
+    sliderBox.hidden = false;
+    sliderMeta.textContent = `Checking smallest possible size for ${file.name}...`;
+    const requestedFmt = imageFormatSelect.value;
+    const maxWRaw = maxWidthInput.value.trim();
+    const maxWidth = maxWRaw ? parseInt(maxWRaw, 10) : null;
+
+    try {
+      const minBytes = Math.max(1, await probeFileMinimum(file, requestedFmt, maxWidth));
+      if (queue[0] !== file) return;
+      activeOrigBytes = file.size;
+      activeMinBytes = minBytes;
+      const minPct = Math.max(1, Math.min(100, Math.ceil((minBytes / file.size) * 100)));
+      sizeSlider.min = String(minPct);
+      sizeSlider.max = "100";
+      sizeSlider.value = String(Math.floor((minPct + 100) / 2));
+      sliderMinLabel.textContent = `${minPct}% min`;
+      sliderMeta.textContent = `Original: ${formatBytes(file.size)} • Smallest possible: ${formatBytes(minBytes)} (${minPct}% of original, up to ${100 - minPct}% smaller)`;
+      useSliderToggle.checked = minPct < 100;
+      updateSliderReadout();
+    } catch {
+      sliderBox.hidden = true;
+    }
+  }
+
+  sizeSlider.addEventListener("input", () => {
+    useSliderToggle.checked = true;
+    updateSliderReadout();
+  });
+  imageFormatSelect.addEventListener("change", refreshSliderEstimate);
+  maxWidthInput.addEventListener("change", refreshSliderEstimate);
 
   function addFiles(fileList) {
     for (const f of fileList) queue.push(f);
@@ -360,7 +452,13 @@
 
     let targetBytes = null;
     try {
-      targetBytes = parseSize(document.getElementById("targetSize").value);
+      const rawTarget = document.getElementById("targetSize").value.trim();
+      if (useSliderToggle.checked && !rawTarget && queue.length === 1) {
+        const sliderPct = parseInt(sizeSlider.value, 10);
+        targetBytes = Math.max(1, Math.floor(queue[0].size * (sliderPct / 100)));
+      } else {
+        targetBytes = parseSize(rawTarget);
+      }
     } catch (err) {
       appendErrorCard("Target Size", err.message);
       compressBtn.disabled = false;

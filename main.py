@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+import math
+import os
+import select
 import sys
 from pathlib import Path
 from typing import Optional
@@ -11,7 +14,7 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
-from rich.prompt import Confirm, Prompt
+from rich.prompt import Confirm, IntPrompt, Prompt
 from rich.table import Table
 
 # Ensure local modules resolve cleanly even when launched from outside this directory.
@@ -28,14 +31,19 @@ from archive_compressor import (  # noqa: E402
     is_archive_path,
     resolve_archive_extension,
 )
-from audio_compressor import AUDIO_EXTENSIONS, compress_audio, resolve_audio_extension  # noqa: E402
-from common import CompressionResult, format_size, parse_size  # noqa: E402
+from audio_compressor import (  # noqa: E402
+    AUDIO_EXTENSIONS,
+    compress_audio,
+    estimate_min_audio_bytes,
+    resolve_audio_extension,
+)
+from common import CompressionResult, format_size, make_temp_path, parse_size, parse_target_spec  # noqa: E402
 from font_compressor import FONT_EXTENSIONS, compress_font, resolve_font_extension  # noqa: E402
-from image_compressor import IMAGE_EXTENSIONS, compress_image  # noqa: E402
+from image_compressor import IMAGE_EXTENSIONS, compress_image, estimate_min_image_bytes  # noqa: E402
 from office_compressor import OFFICE_EXTENSIONS, compress_office  # noqa: E402
-from pdf_compressor import PDF_EXTENSIONS, compress_pdf  # noqa: E402
+from pdf_compressor import PDF_EXTENSIONS, compress_pdf, estimate_min_pdf_bytes  # noqa: E402
 from svg_compressor import SVG_EXTENSIONS, compress_svg  # noqa: E402
-from video_compressor import VIDEO_EXTENSIONS, compress_video  # noqa: E402
+from video_compressor import VIDEO_EXTENSIONS, compress_video, estimate_min_video_bytes  # noqa: E402
 
 console = Console()
 SUPPORTED_EXTENSIONS = (
@@ -221,7 +229,9 @@ def _print_cheat_sheet() -> None:
         ("INPUTS", "./file.pdf, ./xyz ...", "One or more files or folders (omit for interactive wizard)"),
         ("help / -h / --help", "shortcut", "Show this full cheat sheet ('help') or brief CLI syntax ('-h')"),
         ("-p, --preset", "low | medium* | high", "Compression level: low (best quality), medium (balanced), high (smallest)"),
-        ("-t, --target-size", "e.g. 500KB, 2MB", "Auto-tune compression to stay under target file size"),
+        ("-t, --target-size", "e.g. 500KB, 45%", "Auto-tune compression to stay under size (bytes or % of original)"),
+        ("-P, --percent", "1-100", "Target compressed size as % of original (e.g. -P 40 = 40% of original)"),
+        ("--slider", "flag", "Check smallest possible size first, then set % with interactive slider"),
         ("-f, --format", "keep* | avif | webp | ...", "Convert format (jpg/png/webp/avif/heic/gif/mp4/webm/mp3/aac/m4a/ogg/opus/pdf/woff/woff2/zip/tar.gz/tar.bz2/tar.xz/tar.zst/gz/bz2/xz/zst)"),
         ("-q, --quality", "1-100", "Custom quality for images, PDFs, and Office embedded images"),
         ("--dpi", "36-600", "Custom image DPI inside PDFs"),
@@ -254,8 +264,10 @@ def _print_cheat_sheet() -> None:
     console.print(formats)
 
     examples = (
-        "[bold yellow]Interactive & Help:[/bold yellow]\n"
+        "[bold yellow]Interactive & Slider Mode:[/bold yellow]\n"
         "  [cyan]python main.py[/cyan]                                     # Guided interactive wizard\n"
+        "  [cyan]python main.py photo.jpg --slider[/cyan]                  # Analyze min size -> interactive % slider\n"
+        "  [cyan]python main.py report.pdf -P 35[/cyan]                    # Shrink directly to 35% of original size\n"
         "  [cyan]python main.py help[/cyan]                                # Show this full cheat sheet\n\n"
         "[bold yellow]PDF (pdf_compressor.py):[/bold yellow]\n"
         "  [cyan]python main.py report.pdf -t 2MB[/cyan]                   # Shrink PDF under 2 MB\n"
@@ -285,6 +297,167 @@ def _print_cheat_sheet() -> None:
         "\n[dim]* denotes default value[/dim]"
     )
     console.print(Panel(examples, title="Common Ways to Compress", border_style="green"))
+
+
+def _estimate_min_bytes(
+    src: Path,
+    output_format: str = "keep",
+    max_width: Optional[int] = None,
+    max_height: Optional[int] = None,
+) -> int:
+    """Probe the smallest achievable output size for a file."""
+    orig_bytes = src.stat().st_size
+    ext = src.suffix.lower()
+    fmt = output_format.lower()
+
+    if fmt in ARCHIVE_OUTPUT_FORMATS or is_archive_path(src):
+        probe_dest = make_temp_path(src, resolve_archive_extension(src, fmt))
+        try:
+            res = compress_archive(src, probe_dest, preset="high", output_format=fmt, keep_smaller=True)
+            return max(1, res.compressed_bytes)
+        finally:
+            probe_dest.unlink(missing_ok=True)
+    if ext in PDF_EXTENSIONS:
+        return estimate_min_pdf_bytes(src)
+    if ext in VIDEO_EXTENSIONS or (ext == ".gif" and fmt in ("mp4", "webm")):
+        return estimate_min_video_bytes(src)
+    if ext in AUDIO_EXTENSIONS:
+        return estimate_min_audio_bytes(src)
+    if ext in SVG_EXTENSIONS:
+        probe_dest = make_temp_path(src, ".min.svg")
+        try:
+            res = compress_svg(src, probe_dest, preset="high", keep_smaller=True)
+            return max(1, res.compressed_bytes)
+        finally:
+            probe_dest.unlink(missing_ok=True)
+    if ext in OFFICE_EXTENSIONS:
+        probe_dest = make_temp_path(src, f".min{ext}")
+        try:
+            res = compress_office(
+                src,
+                probe_dest,
+                preset="high",
+                max_width=max_width,
+                max_height=max_height,
+                output_format=fmt,
+                keep_smaller=True,
+            )
+            return max(1, res.compressed_bytes)
+        finally:
+            probe_dest.unlink(missing_ok=True)
+    if ext in FONT_EXTENSIONS:
+        probe_dest = make_temp_path(src, resolve_font_extension(src, fmt))
+        try:
+            res = compress_font(src, probe_dest, output_format=fmt, keep_smaller=True)
+            return max(1, res.compressed_bytes)
+        finally:
+            probe_dest.unlink(missing_ok=True)
+    if ext in IMAGE_EXTENSIONS:
+        return estimate_min_image_bytes(src, output_format=fmt, max_width=max_width, max_height=max_height)
+    return orig_bytes
+
+
+def _read_keypress(fd: int) -> str:
+    """Read a single keypress (including arrow escape sequences) from raw/cbreak fd."""
+    ch = os.read(fd, 1).decode("utf-8", errors="ignore")
+    if ch == "\x1b":
+        ready, _, _ = select.select([fd], [], [], 0.05)
+        if ready:
+            seq = os.read(fd, 2).decode("utf-8", errors="ignore")
+            return ch + seq
+    return ch
+
+
+def _format_slider_line(orig_bytes: int, min_bytes: int, min_pct: int, selected_pct: int) -> str:
+    """Format a compact single-line terminal slider track."""
+    width = 32
+    span = max(1, 100 - min_pct)
+    pos = int(round(((selected_pct - min_pct) / span) * width))
+    pos = max(0, min(width, pos))
+
+    left_fill = "━" * pos
+    right_track = "─" * (width - pos)
+    target_est = max(min_bytes, int(orig_bytes * (selected_pct / 100.0)))
+    reduction_pct = max(0.0, 100.0 - selected_pct)
+
+    return (
+        f"\r\033[K  \033[32m{min_pct:3d}%\033[0m "
+        f"[\033[36m{left_fill}\033[1;37;44m●\033[0m\033[90m{right_track}\033[0m] "
+        f"\033[33m100%\033[0m  "
+        f"Selected: \033[1;33m{selected_pct}%\033[0m "
+        f"(~{format_size(target_est)}, \033[32m-{reduction_pct:.0f}% saved\033[0m)"
+    )
+
+
+def _interactive_percent_slider(
+    src: Path,
+    output_format: str = "keep",
+    max_width: Optional[int] = None,
+    max_height: Optional[int] = None,
+) -> int:
+    """Analyze minimum achievable size, then let the user choose target % with a live slider."""
+    import termios
+    import tty
+
+    orig_bytes = src.stat().st_size
+    with console.status(f"[cyan]Analyzing minimum possible size for {src.name}...[/cyan]"):
+        min_bytes = _estimate_min_bytes(src, output_format=output_format, max_width=max_width, max_height=max_height)
+
+    min_pct = max(1, min(100, math.ceil((min_bytes / orig_bytes) * 100))) if orig_bytes else 100
+    max_reduction = max(0, 100 - min_pct)
+
+    console.print(
+        Panel(
+            f"[bold]{src.name}[/bold]\n"
+            f"Original Size: [cyan]{format_size(orig_bytes)}[/cyan]   |   "
+            f"Smallest Possible: [bold green]{format_size(min_bytes)} ({min_pct}% of original, -{max_reduction}% max reduction)[/bold green]\n"
+            f"[dim]Controls: ←/→ or a/d (±1%)  •  ↑/↓ or [ or ] (±5%)  •  Enter = Compress  •  q/Esc = Cancel[/dim]",
+            title="Interactive Size Slider",
+            border_style="cyan",
+        )
+    )
+
+    if min_pct >= 100:
+        console.print("[yellow]File is already at its minimum practical size (100%).[/yellow]")
+        return 100
+
+    pct = max(min_pct, min(100, (min_pct + 100) // 2))
+    if not sys.stdin.isatty():
+        return IntPrompt.ask(
+            f"Enter target % of original size ({min_pct}-100)",
+            default=pct,
+        )
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setcbreak(fd)
+        sys.stdout.write(_format_slider_line(orig_bytes, min_bytes, min_pct, pct))
+        sys.stdout.flush()
+        while True:
+            key = _read_keypress(fd)
+            if key in ("\r", "\n"):
+                break
+            if key in ("q", "Q", "\x03", "\x1b"):
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                raise SystemExit(0)
+            if key in ("\x1b[D", "a", "A", "-", "_"):
+                pct = max(min_pct, pct - 1)
+            elif key in ("\x1b[C", "d", "D", "+", "="):
+                pct = min(100, pct + 1)
+            elif key in ("\x1b[B", "["):
+                pct = max(min_pct, pct - 5)
+            elif key in ("\x1b[A", "]"):
+                pct = min(100, pct + 5)
+            sys.stdout.write(_format_slider_line(orig_bytes, min_bytes, min_pct, pct))
+            sys.stdout.flush()
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
+    return pct
 
 
 def _interactive_wizard() -> tuple:
@@ -322,9 +495,15 @@ def _interactive_wizard() -> tuple:
             recursive = Confirm.ask("Scan subfolders recursively?", default=False)
             kind = Prompt.ask("Filter file type", choices=MEDIA_TYPE_CHOICES, default="all")
 
-    preset = Prompt.ask("Compression preset", choices=["low", "medium", "high"], default="medium")
-    target_size_raw = Prompt.ask("Max target size (e.g. 500KB, 5MB, or Enter to skip)", default="").strip()
-    target_size = target_size_raw or None
+    preset = "medium"
+    target_size: Optional[str] = None
+    use_slider = False
+    if target_path.is_file():
+        use_slider = Confirm.ask("Check minimum possible size & set reduction % with slider?", default=True)
+    if not use_slider:
+        preset = Prompt.ask("Compression preset", choices=["low", "medium", "high"], default="medium")
+        target_size_raw = Prompt.ask("Max target size (e.g. 500KB, 5MB, 45%, or Enter to skip)", default="").strip()
+        target_size = target_size_raw or None
     in_place = False if target_path.is_dir() and output_format != "keep" else Confirm.ask("Overwrite original file(s) in-place?", default=False)
 
     out_path: Optional[Path] = None
@@ -333,7 +512,7 @@ def _interactive_wizard() -> tuple:
         if out_raw:
             out_path = Path(out_raw)
 
-    return (target_path,), preset, None, None, None, None, output_format, "h264", None, target_size, kind, out_path, in_place, recursive
+    return (target_path,), preset, None, None, None, None, output_format, "h264", None, target_size, None, use_slider, kind, out_path, in_place, recursive
 
 
 def _render_summary(results: list[CompressionResult], failures: list[tuple[Path, str]]) -> None:
@@ -413,7 +592,9 @@ def _render_summary(results: list[CompressionResult], failures: list[tuple[Path,
     help="Video encoder codec for MP4/MOV/MKV.",
 )
 @click.option("--audio-bitrate", type=click.IntRange(24, 320), default=None, help="Audio bitrate in kbps (24-320).")
-@click.option("-t", "--target-size", default=None, help="Auto-fit under target size (e.g. 500KB, 5MB).")
+@click.option("-t", "--target-size", default=None, help="Auto-fit under target size (e.g. 500KB, 5MB, or 45%).")
+@click.option("-P", "--percent", type=click.IntRange(1, 100), default=None, help="Target size as % of original (1-100).")
+@click.option("--slider", is_flag=True, help="Analyze smallest possible size first, then pick % with an interactive slider.")
 @click.option(
     "--type",
     "kind",
@@ -437,6 +618,8 @@ def main(
     video_codec: str,
     audio_bitrate: Optional[int],
     target_size: Optional[str],
+    percent: Optional[int],
+    slider: bool,
     kind: str,
     output: Optional[Path],
     in_place: bool,
@@ -460,6 +643,8 @@ def main(
             video_codec,
             audio_bitrate,
             target_size,
+            percent,
+            slider,
             kind,
             output,
             in_place,
@@ -472,19 +657,34 @@ def main(
             console.print(f"[red]Path does not exist:[/red] {p}")
         sys.exit(1)
 
-    target_bytes: Optional[int] = None
-    if target_size:
-        try:
-            target_bytes = parse_size(target_size)
-        except ValueError as exc:
-            console.print(f"[red]{exc}[/red]")
-            sys.exit(2)
-
     fmt_lower = output_format.lower()
     targets = _collect_inputs(inputs, recursive=recursive, kind=kind.lower(), output_format=fmt_lower)
     if not targets:
         console.print("[yellow]No supported files found.[/yellow]")
         sys.exit(1)
+
+    if slider:
+        if len(targets) != 1 or targets[0].is_dir():
+            console.print("[yellow]--slider operates on a single file; pass one file at a time.[/yellow]")
+            sys.exit(2)
+        percent = _interactive_percent_slider(
+            targets[0],
+            output_format=fmt_lower,
+            max_width=max_width,
+            max_height=max_height,
+        )
+
+    fixed_target_bytes: Optional[int] = None
+    pct_spec: Optional[str] = f"{percent}%" if percent is not None else None
+    if target_size:
+        if target_size.strip().endswith("%"):
+            pct_spec = target_size.strip()
+        else:
+            try:
+                fixed_target_bytes = parse_size(target_size)
+            except ValueError as exc:
+                console.print(f"[red]{exc}[/red]")
+                sys.exit(2)
 
     multi_mode = len(targets) > 1
     results: list[CompressionResult] = []
@@ -502,6 +702,14 @@ def main(
             progress.update(task_id, description=f"Compressing {src.name}")
             ext = src.suffix.lower()
             dest = _resolve_destination(src, output, in_place, fmt_lower, multi_mode)
+            target_bytes = fixed_target_bytes
+            if pct_spec is not None and src.is_file():
+                try:
+                    target_bytes = parse_target_spec(pct_spec, src.stat().st_size)
+                except ValueError as exc:
+                    failures.append((src, str(exc)))
+                    progress.advance(task_id)
+                    continue
             try:
                 if src.is_dir():
                     res = compress_directory(src, dest, preset=preset.lower(), output_format=fmt_lower)

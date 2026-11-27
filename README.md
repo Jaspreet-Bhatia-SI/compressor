@@ -127,9 +127,11 @@ pip install -r requirements.txt
 
 > Every module in this repo also documents CLI + Python API examples in its header docstring. Run `python main.py help` anytime in your terminal for the built-in cheat sheet.
 
-### Interactive Mode & Built-in Cheat Sheet
+### Interactive Mode, Size Slider & Built-in Cheat Sheet
 ```bash
-python main.py                                     # Launch guided interactive wizard
+python main.py                                     # Launch guided interactive wizard (includes % slider)
+python main.py photo.jpg --slider                  # Probe minimum possible size, then slide % (min%..100%)
+python main.py report.pdf -P 35                    # Compress directly to 35% of original size (or -t 35%)
 python main.py help                                # Show colorful flags, formats & examples cheat sheet
 python main.py -h                                  # Show concise CLI flag syntax
 ```
@@ -212,7 +214,9 @@ python main.py ./xyz -r --in-place                 # Safely replace originals at
 | `-f, --format` | `keep` | Convert format (`avif`, `webp`, `heic`, `jpg`, `png`, `gif`, `mp4`, `webm`, `mp3`, `aac`, `m4a`, `ogg`, `opus`, `pdf`, `woff2`, `woff`, `zip`, `tar.gz`, `tar.xz`, `tar.zst`, `gz`, `xz`, `zst`) |
 | `--video-codec` | `h264` | `h264` or `h265` for video |
 | `--audio-bitrate` | auto | Audio bitrate in kbps (`24–320`) |
-| `-t, --target-size` | none | Auto-fit output under size target (`500KB`, `5MB`, etc.) |
+| `-t, --target-size` | none | Auto-fit output under size target (`500KB`, `5MB`, or `45%`) |
+| `-P, --percent` | none | Target compressed size as `%` of original (`1–100`) |
+| `--slider` | `false` | Check smallest possible size first, then set `%` with an interactive arrow-key slider |
 | `--type` | `all` | Filter folder scans: `all`, `pdf`, `image`, `video`, `audio`, `svg`, `office`, `font`, `archive` |
 | `-o, --output` | `*_compressed` | Custom output file or directory |
 | `--in-place` | `false` | Safely replace original file(s) atomically |

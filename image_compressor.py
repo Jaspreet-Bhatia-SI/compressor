@@ -272,3 +272,33 @@ def compress_image(
     finally:
         tmp_path.unlink(missing_ok=True)
         best_path.unlink(missing_ok=True)
+
+
+def estimate_min_image_bytes(
+    source: Path,
+    output_format: str = "keep",
+    max_width: Optional[int] = None,
+    max_height: Optional[int] = None,
+) -> int:
+    """Quickly probe the smallest achievable image size for slider bounds."""
+    orig_size = source.stat().st_size
+    ext = source.suffix.lstrip(".").lower() or "jpg"
+    target_fmt = ext if output_format == "keep" else output_format.lower()
+    tmp_path = make_temp_path(source, f".min.{target_fmt}")
+    try:
+        if target_fmt == "gif" and _compress_gif_ffmpeg(
+            source, tmp_path, preset="high", max_width=max_width, max_height=max_height
+        ):
+            return max(1, min(orig_size, tmp_path.stat().st_size) if output_format == "keep" else tmp_path.stat().st_size)
+
+        with Image.open(source) as raw_img:
+            img = ImageOps.exif_transpose(raw_img)
+            img = _resize_to_fit(img, max_width, max_height)
+            new_w = max(1, int(img.width * 0.4))
+            new_h = max(1, int(img.height * 0.4))
+            candidate = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            _save_pillow_image(candidate, tmp_path, target_fmt, 18, preset="high")
+            probed = tmp_path.stat().st_size
+            return max(1, min(orig_size, probed) if output_format == "keep" else probed)
+    finally:
+        tmp_path.unlink(missing_ok=True)

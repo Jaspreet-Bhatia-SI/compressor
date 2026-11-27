@@ -105,3 +105,13 @@ def compress_audio(
         )
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+def estimate_min_audio_bytes(source: Path) -> int:
+    """Estimate lowest safe audio size using duration and minimum 24 kbps bitrate."""
+    orig_size = source.stat().st_size
+    duration = probe_duration_seconds(source)
+    if not duration:
+        return max(1, int(orig_size * 0.25))
+    min_floor = int((24 * 1000 * duration) / 8 / 0.94)
+    return max(1, min(orig_size, min_floor))

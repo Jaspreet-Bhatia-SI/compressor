@@ -130,3 +130,13 @@ def compress_video(
         )
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+def estimate_min_video_bytes(source: Path) -> int:
+    """Estimate lowest safe video size using duration and minimum bitrate floor (112 kbps total)."""
+    orig_size = source.stat().st_size
+    duration = probe_duration_seconds(source)
+    if not duration:
+        return max(1, int(orig_size * 0.35))
+    min_floor = int((112 * 1000 * duration) / 8 / 0.92)
+    return max(1, min(orig_size, min_floor))
