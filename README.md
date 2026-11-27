@@ -10,6 +10,7 @@
 
 [![JBSI](https://img.shields.io/badge/Brand-JBSI-0EA5E9?style=for-the-badge)](https://github.com/Jaspreet-Bhatia-SI)
 [![Author](https://img.shields.io/badge/Author-Jaspreet%20Bhatia-F59E0B?style=for-the-badge)](https://github.com/Jaspreet-Bhatia-SI)
+[![Compress Online](https://img.shields.io/badge/Compress%20Online-GitHub%20Pages-0284C7?style=for-the-badge&logo=googlechrome&logoColor=white)](https://jaspreet-bhatia-si.github.io/compressor/)
 [![Open in Codespaces](https://img.shields.io/badge/Real%20Terminal-Open%20in%20Codespaces-10B981?style=for-the-badge&logo=githubcodespaces&logoColor=white)](https://codespaces.new/Jaspreet-Bhatia-SI/compressor)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Formats](https://img.shields.io/badge/Formats-35%2B-818CF8?style=for-the-badge)](#supported-formats--engines)
@@ -97,6 +98,7 @@ compressor/
 ├── font_compressor.py      # TTF/OTF -> WOFF2 Brotli font compressor
 ├── archive_compressor.py   # Archive re-compressor & folder bundler
 ├── .devcontainer/          # One-click GitHub Codespaces terminal (Python + FFmpeg + Ghostscript)
+├── docs/                   # Light-theme browser-local Web App (GitHub Pages)
 ├── LICENSE                 # MIT License & JBSI Trademark Notice
 ├── requirements.txt        # Python dependencies
 └── assets/                 # Animated SVG banner & terminal demo

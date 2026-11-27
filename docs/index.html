@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JBSI Instant Compressor — Clean Light Studio</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand-group">
+        <span class="brand-mark">JBSI</span>
+        <div class="brand-text">
+          <span class="brand-title">All-in-One Compressor</span>
+          <span class="brand-author">by Jaspreet Bhatia</span>
+        </div>
+      </div>
+      <nav class="nav-links">
+        <span class="privacy-pill">
+          <span class="dot"></span>
+          100% Browser-Local (Zero Upload)
+        </span>
+        <a class="nav-btn" href="https://github.com/Jaspreet-Bhatia-SI/compressor" target="_blank" rel="noopener">
+          GitHub Repo
+        </a>
+        <a class="nav-btn nav-btn-accent" href="https://codespaces.new/Jaspreet-Bhatia-SI/compressor" target="_blank" rel="noopener">
+          Open CLI Terminal
+        </a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>Compress files cleanly in seconds.</h1>
+      <p>
+        Drop <strong>Images (AVIF / WebP / JPG / PNG)</strong>, <strong>SVGs</strong>, <strong>Office files (.pptx / .docx / .xlsx)</strong>, or <strong>ZIP archives</strong>. Everything runs privately inside your browser with zero-bloat protection.
+      </p>
+    </section>
+
+    <main class="studio-card">
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Drop files or click to select">
+        <div class="drop-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <strong>Drop files here or click to browse</strong>
+        <span>Supports multi-file batch compression &bull; Never uploads your files anywhere</span>
+        <input type="file" id="fileInput" multiple hidden />
+      </div>
+
+      <div class="file-pills" id="filePills"></div>
+
+      <div class="controls-grid">
+        <label class="field">
+          <span>Preset Strength</span>
+          <select id="preset">
+            <option value="low">Low — Highest Quality</option>
+            <option value="medium" selected>Medium — Balanced</option>
+            <option value="high">High — Smallest File</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Image Format</span>
+          <select id="imageFormat">
+            <option value="keep" selected>Keep Original Format</option>
+            <option value="webp">WebP (Fast &amp; Modern)</option>
+            <option value="avif">AVIF (Smallest Web Size)</option>
+            <option value="jpeg">JPEG</option>
+            <option value="png">PNG</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Max Target Size (Optional)</span>
+          <input type="text" id="targetSize" placeholder="e.g. 300KB or 1.5MB" />
+        </label>
+
+        <label class="field">
+          <span>Max Width (px)</span>
+          <input type="number" id="maxWidth" min="16" max="16000" placeholder="Original width" />
+        </label>
+      </div>
+
+      <div class="action-bar">
+        <div class="status-group">
+          <span id="statusText" class="status-text">Ready — select or drop files to begin</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-outline" id="clearBtn" disabled>Clear</button>
+          <button class="btn btn-outline" id="zipBundleBtn" disabled title="Pack all queued files into one compressed .zip">
+            Bundle as .zip
+          </button>
+          <button class="btn btn-emerald" id="downloadAllBtn" style="display: none;">
+            Download All (.zip)
+          </button>
+          <button class="btn btn-primary" id="compressBtn" disabled>Compress Files</button>
+        </div>
+      </div>
+
+      <div class="results-list" id="results"></div>
+    </main>
+
+    <section class="cards-grid">
+      <article class="feature-card">
+        <div class="card-tag tag-blue">Browser Engine</div>
+        <h3>Instant Client-Side Formats</h3>
+        <ul class="clean-list">
+          <li><strong>Images:</strong> <code>.jpg</code>, <code>.png</code>, <code>.webp</code>, <code>.avif</code>, <code>.bmp</code> with resize &amp; target-size solver</li>
+          <li><strong>Vectors:</strong> <code>.svg</code> comment, metadata &amp; decimal precision optimizer</li>
+          <li><strong>Office Docs:</strong> <code>.pptx</code>, <code>.docx</code>, <code>.xlsx</code>, <code>.odp</code> embedded image compression</li>
+          <li><strong>Archives:</strong> <code>.zip</code> level-9 recompression &amp; multi-file bundling</li>
+        </ul>
+      </article>
+
+      <article class="feature-card">
+        <div class="card-tag tag-green">Full Python CLI</div>
+        <h3>Need PDF, HEIC, Video, Audio, Fonts, or Zstd?</h3>
+        <p class="card-copy">
+          Run the modular Python CLI locally or launch it in one click with GitHub Codespaces for Ghostscript, FFmpeg, FontTools, and Zstandard support:
+        </p>
+        <div class="code-box">
+          <code>python main.py help</code>
+          <button class="copy-btn" data-copy="python main.py help" type="button">Copy</button>
+        </div>
+        <div class="cli-samples">
+          <div class="sample-chip" data-copy="python main.py report.pdf -t 2MB"><code>report.pdf -t 2MB</code></div>
+          <div class="sample-chip" data-copy="python main.py photo.heic -f avif"><code>photo.heic -f avif</code></div>
+          <div class="sample-chip" data-copy="python main.py clip.mp4 --video-codec h265"><code>clip.mp4 --video-codec h265</code></div>
+          <div class="sample-chip" data-copy="python main.py Inter.ttf"><code>Inter.ttf → .woff2</code></div>
+          <div class="sample-chip" data-copy="python main.py ./xyz -f tar.zst"><code>./xyz -f tar.zst</code></div>
+        </div>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <span><strong>JBSI</strong> &bull; Designed &amp; built by <a href="https://github.com/Jaspreet-Bhatia-SI" target="_blank" rel="noopener">Jaspreet Bhatia</a></span>
+      <span>&copy; 2026 MIT License</span>
+    </footer>
+  </div>
+</body>
+</html>
