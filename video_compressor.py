@@ -1,4 +1,19 @@
-"""Dedicated video compressor using FFmpeg."""
+"""Dedicated video compressor using FFmpeg.
+
+CLI Usage Examples:
+    python main.py clip.mp4                          # Balanced H.264 compression (CRF 26)
+    python main.py clip.mp4 --max-height 720 --video-codec h265
+    python main.py demo.mov -t 10MB                  # Fit video under 10 MB via duration bitrate math
+    python main.py anim.gif -f mp4                   # Convert animated GIF -> fast-start MP4
+    python main.py ./videos -r --type video -f webm -o ./out/
+
+Python API Example:
+    from pathlib import Path
+    from video_compressor import compress_video
+
+    res = compress_video(Path("clip.mp4"), Path("clip_720p.mp4"), max_height=720, codec="h265")
+    print(f"Saved {res.reduction_pct:.1f}% using {res.engine}")
+"""
 
 from __future__ import annotations
 

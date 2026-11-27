@@ -1,4 +1,19 @@
-"""Dedicated PDF compressor using Ghostscript and PyMuPDF."""
+"""Dedicated PDF compressor using Ghostscript and PyMuPDF.
+
+CLI Usage Examples:
+    python main.py document.pdf                      # Balanced compression (/ebook preset)
+    python main.py scan.pdf -p high                  # Aggressive screen preset (72 DPI)
+    python main.py syllabus.pdf -t 2MB               # Auto-fit PDF under 2 MB
+    python main.py book.pdf --dpi 120 -q 60          # Custom image DPI & JPEG quality
+    python main.py ./pdfs -r --type pdf -o ./out/    # Batch compress all PDFs in a folder
+
+Python API Example:
+    from pathlib import Path
+    from pdf_compressor import compress_pdf
+
+    res = compress_pdf(Path("report.pdf"), Path("report_compressed.pdf"), target_bytes=2 * 1024 * 1024)
+    print(f"Saved {res.reduction_pct:.1f}% using {res.engine}")
+"""
 
 from __future__ import annotations
 

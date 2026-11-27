@@ -1,4 +1,17 @@
-"""Dedicated SVG vector optimizer using Scour."""
+"""Dedicated SVG vector optimizer using Scour.
+
+CLI Usage Examples:
+    python main.py logo.svg                          # Medium optimization (shorten IDs, strip metadata)
+    python main.py icon.svg -p high                  # Aggressive minification (2 decimal digits, no XML prolog)
+    python main.py ./icons -r --type svg --in-place  # Optimize all SVGs recursively in-place
+
+Python API Example:
+    from pathlib import Path
+    from svg_compressor import compress_svg
+
+    res = compress_svg(Path("logo.svg"), Path("logo_min.svg"), preset="high")
+    print(f"Saved {res.reduction_pct:.1f}% using {res.engine}")
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,20 @@
-"""Dedicated image compressor using Pillow, pillow-heif, and FFmpeg (for animated GIFs)."""
+"""Dedicated image compressor using Pillow, pillow-heif, and FFmpeg (for animated GIFs).
+
+CLI Usage Examples:
+    python main.py photo.jpg                         # Compress keeping original format
+    python main.py photo.heic -p medium -f avif      # Convert iPhone HEIC -> tiny AVIF
+    python main.py banner.png --max-width 1920 -f webp
+    python main.py avatar.jpg -t 200KB               # Auto-fit image under 200 KB
+    python main.py anim.gif -p high --max-width 480  # Shrink animated GIF (palettegen)
+    python main.py anim.gif -f mp4                   # Convert animated GIF -> MP4 video
+
+Python API Example:
+    from pathlib import Path
+    from image_compressor import compress_image
+
+    res = compress_image(Path("photo.heic"), Path("photo.avif"), preset="medium", output_format="avif")
+    print(f"Saved {res.reduction_pct:.1f}% using {res.engine}")
+"""
 
 from __future__ import annotations
 

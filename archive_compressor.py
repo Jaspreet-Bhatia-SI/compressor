@@ -1,4 +1,19 @@
-"""Dedicated archive compressor and bundler (ZIP, TAR, GZ, BZ2, XZ, ZSTD)."""
+"""Dedicated archive compressor and bundler (ZIP, TAR, GZ, BZ2, XZ, ZSTD).
+
+CLI Usage Examples:
+    python main.py backup.zip -f tar.zst -p high     # Re-pack ZIP into ultra-tight Zstd archive
+    python main.py logs.tar -p medium                # Compresses uncompressed .tar -> .tar.zst
+    python main.py ./project_folder -f tar.zst       # Bundle entire folder into project_folder_compressed.tar.zst
+    python main.py ./assets -f zip -o ./assets.zip   # Bundle folder as level-9 ZIP
+    python main.py database.sql -f zst -p high       # Compress a single large file with Zstandard
+
+Python API Example:
+    from pathlib import Path
+    from archive_compressor import compress_archive, compress_directory
+
+    res = compress_directory(Path("./folder"), Path("./folder.tar.zst"), preset="high", output_format="tar.zst")
+    print(f"Saved {res.reduction_pct:.1f}% using {res.engine}")
+"""
 
 from __future__ import annotations
 

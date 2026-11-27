@@ -10,6 +10,7 @@
 
 [![JBSI](https://img.shields.io/badge/Brand-JBSI-0EA5E9?style=for-the-badge)](https://github.com/Jaspreet-Bhatia-SI)
 [![Author](https://img.shields.io/badge/Author-Jaspreet%20Bhatia-F59E0B?style=for-the-badge)](https://github.com/Jaspreet-Bhatia-SI)
+[![Open in Codespaces](https://img.shields.io/badge/Real%20Terminal-Open%20in%20Codespaces-10B981?style=for-the-badge&logo=githubcodespaces&logoColor=white)](https://codespaces.new/Jaspreet-Bhatia-SI/compressor)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Formats](https://img.shields.io/badge/Formats-35%2B-818CF8?style=for-the-badge)](#supported-formats--engines)
 [![License: MIT](https://img.shields.io/badge/License-MIT-64748B?style=for-the-badge)](LICENSE)
@@ -18,10 +19,15 @@
 
 ---
 
-## Live Preview
+## Live Preview & Real Cloud Terminal
 
 <div align="center">
-  <img src="assets/terminal-demo.svg" alt="Animated CLI Terminal Demo" width="100%"/>
+  <img src="assets/terminal-demo.svg" alt="Real CLI Session Recording" width="100%"/>
+  <br/><br/>
+  <a href="https://codespaces.new/Jaspreet-Bhatia-SI/compressor">
+    <img src="https://github.com/codespaces/badge.svg" alt="Open in GitHub Codespaces"/>
+  </a>
+  <p><em>Recorded from an actual <code>python main.py</code> batch run — or click <strong>Open in GitHub Codespaces</strong> above to launch a real Linux terminal with Python, FFmpeg, and Ghostscript pre-installed.</em></p>
 </div>
 
 ---
@@ -90,6 +96,7 @@ compressor/
 ├── office_compressor.py    # Editable Office media optimizer & PDF exporter
 ├── font_compressor.py      # TTF/OTF -> WOFF2 Brotli font compressor
 ├── archive_compressor.py   # Archive re-compressor & folder bundler
+├── .devcontainer/          # One-click GitHub Codespaces terminal (Python + FFmpeg + Ghostscript)
 ├── LICENSE                 # MIT License & JBSI Trademark Notice
 ├── requirements.txt        # Python dependencies
 └── assets/                 # Animated SVG banner & terminal demo
@@ -114,44 +121,81 @@ pip install -r requirements.txt
 
 ---
 
-## Usage Examples
+## Usage Examples (By Compressor)
 
+> Every module in this repo also documents CLI + Python API examples in its header docstring. Run `python main.py help` anytime in your terminal for the built-in cheat sheet.
+
+### Interactive Mode & Built-in Cheat Sheet
 ```bash
-# Show full colorful cheat sheet with all flags, formats, and examples
-python main.py help
+python main.py                                     # Launch guided interactive wizard
+python main.py help                                # Show colorful flags, formats & examples cheat sheet
+python main.py -h                                  # Show concise CLI flag syntax
+```
 
-# Interactive wizard (prompts for file/folder, preset, target size, output mode)
-python main.py
+### 1. PDF (`pdf_compressor.py`)
+```bash
+python main.py document.pdf                        # Balanced compression (/ebook preset, 150 DPI)
+python main.py scan.pdf -p high                    # Smallest screen preset (72 DPI)
+python main.py syllabus.pdf -t 2MB                 # Auto-fit PDF strictly under 2 MB
+python main.py book.pdf --dpi 120 -q 60            # Custom image DPI & JPEG quality
+```
 
-# PDF: shrink under 2 MB
-python main.py syllabus.pdf -t 2MB
+### 2. Images — JPG, PNG, WebP, AVIF, HEIC, GIF (`image_compressor.py`)
+```bash
+python main.py photo.heic -p medium -f avif        # Convert iPhone HEIC -> tiny AVIF
+python main.py banner.png --max-width 1920 -f webp # Downscale + convert PNG -> WebP
+python main.py avatar.jpg -t 200KB                 # Auto-fit image under 200 KB
+python main.py anim.gif -p high --max-width 480    # Optimize animated GIF (FFmpeg palettegen)
+python main.py anim.gif -f mp4                     # Convert animated GIF -> lightweight MP4
+```
 
-# Images: convert iPhone HEIC or JPEG photo to modern AVIF / WebP
-python main.py photo.heic -p medium -f avif
-python main.py photo.jpg -p high -f webp
-
-# Animated GIF: shrink GIF or convert GIF -> lightweight MP4
-python main.py animation.gif -p medium --max-width 640
-python main.py animation.gif -f mp4
-
-# Video: resize to 720p max height with H.265 or hit exact size limit
+### 3. Video (`video_compressor.py`)
+```bash
+python main.py clip.mp4                            # Balanced H.264 compression (CRF 26)
 python main.py clip.mp4 --max-height 720 --video-codec h265
-python main.py clip.mp4 -t 10MB
+python main.py demo.mov -t 10MB                    # Auto-fit video under 10 MB via duration math
+python main.py clip.avi -f webm -p high            # Convert AVI -> VP9/Opus WebM
+```
 
-# Audio: convert lossless WAV/FLAC to compact 64kbps MP3
-python main.py recording.wav -p high
+### 4. Audio (`audio_compressor.py`)
+```bash
+python main.py recording.wav -p high               # Convert lossless WAV -> compact 64kbps MP3
+python main.py track.flac -f opus --audio-bitrate 96
+python main.py podcast.mp3 -t 5MB                  # Auto-fit audio under 5 MB
+```
 
-# SVG, Office Decks & Web Fonts
-python main.py logo.svg -p high
-python main.py presentation.pptx -p medium        # shrinks embedded slides/media, stays editable!
-python main.py Inter-Regular.ttf                  # converts to Inter-Regular_compressed.woff2
+### 5. SVG Vectors (`svg_compressor.py`)
+```bash
+python main.py logo.svg                            # Medium Scour optimization (shorten IDs, strip metadata)
+python main.py icon.svg -p high                    # Aggressive minification (2 decimal precision)
+```
 
-# Archives & Folder Bundling
-python main.py backup.zip -f tar.zst -p high      # re-pack ZIP as ultra-tight Zstd archive
-python main.py ./assets_folder -f tar.zst         # bundle & compress entire folder
+### 6. Office Documents (`office_compressor.py`)
+```bash
+python main.py slides.pptx -p medium               # Shrink embedded slide images (keeps .pptx editable!)
+python main.py report.docx -p high --max-width 1024
+python main.py deck.pptx -f pdf -t 3MB             # Export Office -> compressed PDF (requires LibreOffice)
+```
 
-# Batch compress a folder recursively into ./out/
-python main.py ./media -r --type image -f avif -o ./out/
+### 7. Fonts (`font_compressor.py`)
+```bash
+python main.py Inter-Regular.ttf                   # Compress desktop TTF -> .woff2 (Brotli)
+python main.py BrandFont.otf -f woff               # Convert OTF -> .woff
+```
+
+### 8. Archives & Folder Bundling (`archive_compressor.py`)
+```bash
+python main.py backup.zip -f tar.zst -p high       # Re-pack ZIP into ultra-tight .tar.zst
+python main.py logs.tar                            # Compress uncompressed .tar -> .tar.zst
+python main.py ./xyz -f tar.zst                    # Bundle entire ./xyz folder -> xyz_compressed.tar.zst
+python main.py database.sql -f zst -p high         # Compress any single file with Zstandard
+```
+
+### 9. Batch Folder Compression (`./xyz`)
+```bash
+python main.py ./xyz -r -o ./compressed/           # Recursively compress all supported media into ./compressed/
+python main.py ./xyz -r --type image -f avif       # Convert only images in ./xyz to AVIF
+python main.py ./xyz -r --in-place                 # Safely replace originals atomically in-place
 ```
 
 <details>

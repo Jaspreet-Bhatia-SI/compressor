@@ -1,0 +1,14 @@
+{
+  "name": "JBSI All-in-One CLI Compressor",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {}
+  },
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg ghostscript && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt",
+  "postAttachCommand": "echo '\\nTip: Activate venv with `source venv/bin/activate` and run `python main.py help` for all flags & examples.\\n'",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"]
+    }
+  }
+}

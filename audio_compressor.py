@@ -1,4 +1,18 @@
-"""Dedicated audio compressor using FFmpeg."""
+"""Dedicated audio compressor using FFmpeg.
+
+CLI Usage Examples:
+    python main.py recording.wav -p high             # Convert lossless WAV -> 64kbps MP3
+    python main.py track.flac -f opus --audio-bitrate 96
+    python main.py podcast.mp3 -t 5MB                # Fit audio under 5 MB automatically
+    python main.py ./audio -r --type audio -f m4a -o ./out/
+
+Python API Example:
+    from pathlib import Path
+    from audio_compressor import compress_audio
+
+    res = compress_audio(Path("voice.wav"), Path("voice.mp3"), preset="medium")
+    print(f"Saved {res.reduction_pct:.1f}% using {res.engine}")
+"""
 
 from __future__ import annotations
 

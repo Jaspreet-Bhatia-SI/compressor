@@ -1,4 +1,17 @@
-"""Dedicated font compressor using FontTools and Brotli (WOFF2 / WOFF)."""
+"""Dedicated font compressor using FontTools and Brotli (WOFF2 / WOFF).
+
+CLI Usage Examples:
+    python main.py Inter-Regular.ttf                 # Converts TTF -> Inter-Regular_compressed.woff2
+    python main.py BrandFont.otf -f woff             # Convert OTF -> WOFF
+    python main.py ./fonts -r --type font -o ./webfonts/
+
+Python API Example:
+    from pathlib import Path
+    from font_compressor import compress_font
+
+    res = compress_font(Path("Inter.ttf"), Path("Inter.woff2"))
+    print(f"Saved {res.reduction_pct:.1f}% using {res.engine}")
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,18 @@
-"""Dedicated Office document compressor (.docx, .pptx, .xlsx, .odt, .odp, .ods)."""
+"""Dedicated Office document compressor (.docx, .pptx, .xlsx, .odt, .odp, .ods).
+
+CLI Usage Examples:
+    python main.py slides.pptx                       # Downscale & compress embedded slide media (stays editable)
+    python main.py report.docx -p high --max-width 1024
+    python main.py deck.pptx -f pdf -t 3MB           # Export to PDF via LibreOffice & shrink under 3 MB
+    python main.py ./docs -r --type office -o ./out/
+
+Python API Example:
+    from pathlib import Path
+    from office_compressor import compress_office
+
+    res = compress_office(Path("slides.pptx"), Path("slides_compressed.pptx"), preset="medium")
+    print(f"Saved {res.reduction_pct:.1f}% using {res.engine}")
+"""
 
 from __future__ import annotations
 
