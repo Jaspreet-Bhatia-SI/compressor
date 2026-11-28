@@ -42,11 +42,18 @@
     return `${val.toFixed(2)} ${units[idx]}`;
   }
 
-  function parseSize(raw) {
+  function parseTargetSpec(raw, origBytes) {
     const cleaned = (raw || "").trim().toUpperCase();
     if (!cleaned) return null;
+    if (cleaned.endsWith("%")) {
+      const pct = parseFloat(cleaned.slice(0, -1).trim());
+      if (Number.isNaN(pct) || pct < 1 || pct > 100) {
+        throw new Error(`Invalid percentage "${raw}". Use 1% to 100%.`);
+      }
+      return Math.max(1, Math.floor(origBytes * (pct / 100)));
+    }
     const match = cleaned.match(/^(\d+(?:\.\d+)?)\s*(B|KB|K|MB|M|GB|G)?$/);
-    if (!match) throw new Error(`Invalid target size "${raw}". Try 300KB or 1.5MB.`);
+    if (!match) throw new Error(`Invalid target size "${raw}". Try 300KB, 1.5MB, or 45%.`);
     const val = parseFloat(match[1]);
     const unit = match[2] || "B";
     const mult = { B: 1, K: 1024, KB: 1024, M: 1048576, MB: 1048576, G: 1073741824, GB: 1073741824 };
@@ -170,13 +177,9 @@
     return { blob, outExt: "svg", engine: `browser-svg/${preset}`, skippedLarger: false };
   }
 
-  async function compressZipOrOffice(file, ext, preset) {
-    if (typeof JSZip === "undefined") {
-      throw new Error("JSZip failed to load from CDN. Please verify your internet connection.");
-    }
+  async function packOfficeAttempt(file, ext, cfg, level) {
     const zip = await JSZip.loadAsync(file);
     const isOffice = OFFICE_EXTS.has(ext);
-    const cfg = OFFICE_PRESETS[preset];
     let optimizedImages = 0;
 
     if (isOffice) {
@@ -204,20 +207,64 @@
       }
     }
 
-    const level = preset === "low" ? 6 : 9;
     const outBlob = await zip.generateAsync({
       type: "blob",
       compression: "DEFLATE",
       compressionOptions: { level },
     });
+    return { outBlob, isOffice, optimizedImages };
+  }
 
-    if (outBlob.size >= file.size) {
+  async function compressZipOrOffice(file, ext, preset, targetBytes = null) {
+    if (typeof JSZip === "undefined") {
+      throw new Error("JSZip failed to load from CDN. Please verify your internet connection.");
+    }
+    const level = preset === "low" ? 6 : 9;
+    const isOffice = OFFICE_EXTS.has(ext);
+    let best = null;
+
+    if (isOffice && targetBytes) {
+      const steps = [
+        OFFICE_PRESETS[preset],
+        { maxDim: 1280, quality: 0.7 },
+        { maxDim: 960, quality: 0.52 },
+        { maxDim: 640, quality: 0.35 },
+      ];
+      for (const cfg of steps) {
+        const res = await packOfficeAttempt(file, ext, cfg, 9);
+        if (!best || res.outBlob.size < best.outBlob.size) {
+          best = res;
+        }
+        if (res.outBlob.size <= targetBytes) {
+          best = res;
+          break;
+        }
+      }
+    } else {
+      best = await packOfficeAttempt(file, ext, OFFICE_PRESETS[preset], level);
+    }
+
+    if (best.outBlob.size >= file.size) {
       return { blob: file, outExt: ext, engine: "kept original (already optimal)", skippedLarger: true };
     }
-    const engine = isOffice
-      ? `jszip/office (${optimizedImages} media img)`
+    const engine = best.isOffice
+      ? `jszip/office (${best.optimizedImages} media img)`
       : `jszip/deflate-${level}`;
-    return { blob: outBlob, outExt: ext, engine, skippedLarger: false };
+    return { blob: best.outBlob, outExt: ext, engine, skippedLarger: false };
+  }
+
+  function syncFormatControlAvailability() {
+    if (!queue.length) {
+      imageFormatSelect.disabled = false;
+      return;
+    }
+    const hasConvertibleImage = queue.some((f) => IMAGE_EXTS.has(splitName(f.name).ext));
+    if (!hasConvertibleImage) {
+      imageFormatSelect.value = "keep";
+      imageFormatSelect.disabled = true;
+    } else {
+      imageFormatSelect.disabled = false;
+    }
   }
 
   function renderQueue() {
@@ -241,6 +288,7 @@
     compressBtn.disabled = empty;
     zipBundleBtn.disabled = empty;
     clearBtn.disabled = empty;
+    syncFormatControlAvailability();
     refreshSliderEstimate();
   }
 
@@ -450,24 +498,10 @@
     resultsDiv.innerHTML = "";
     compressedOutputs = [];
 
-    let targetBytes = null;
-    try {
-      const rawTarget = document.getElementById("targetSize").value.trim();
-      if (useSliderToggle.checked && !rawTarget && queue.length === 1) {
-        const sliderPct = parseInt(sizeSlider.value, 10);
-        targetBytes = Math.max(1, Math.floor(queue[0].size * (sliderPct / 100)));
-      } else {
-        targetBytes = parseSize(rawTarget);
-      }
-    } catch (err) {
-      appendErrorCard("Target Size", err.message);
-      compressBtn.disabled = false;
-      return;
-    }
-
+    const rawTarget = document.getElementById("targetSize").value.trim();
     const preset = document.getElementById("preset").value;
-    const requestedFmt = document.getElementById("imageFormat").value;
-    const maxWRaw = document.getElementById("maxWidth").value.trim();
+    const requestedFmt = imageFormatSelect.value;
+    const maxWRaw = maxWidthInput.value.trim();
     const maxWidth = maxWRaw ? parseInt(maxWRaw, 10) : null;
 
     statusText.textContent = `Compressing ${queue.length} file(s) locally...`;
@@ -476,14 +510,22 @@
 
     for (const file of queue) {
       const { stem, ext } = splitName(file.name);
+      let fileTargetBytes = null;
       try {
+        if (useSliderToggle.checked && !rawTarget && queue.length === 1) {
+          const sliderPct = parseInt(sizeSlider.value, 10);
+          fileTargetBytes = Math.max(1, Math.floor(file.size * (sliderPct / 100)));
+        } else if (rawTarget) {
+          fileTargetBytes = parseTargetSpec(rawTarget, file.size);
+        }
+
         let out;
         if (IMAGE_EXTS.has(ext)) {
-          out = await compressImageFile(file, ext, preset, requestedFmt, maxWidth, targetBytes);
+          out = await compressImageFile(file, ext, preset, requestedFmt, maxWidth, fileTargetBytes);
         } else if (ext === "svg") {
           out = await compressSvgFile(file, preset);
         } else if (ext === "zip" || OFFICE_EXTS.has(ext)) {
-          out = await compressZipOrOffice(file, ext, preset);
+          out = await compressZipOrOffice(file, ext, preset, fileTargetBytes);
         } else {
           throw new Error(
             `".${ext}" runs via the Python CLI or Codespaces terminal — or click "Bundle as .zip" right above.`

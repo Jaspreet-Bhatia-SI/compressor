@@ -66,11 +66,11 @@
         </label>
 
         <label class="field">
-          <span>Image Format</span>
+          <span>Convert Format</span>
           <select id="imageFormat">
             <option value="keep" selected>Keep Original Format</option>
-            <option value="webp">WebP (Fast &amp; Modern)</option>
             <option value="avif">AVIF (Smallest Web Size)</option>
+            <option value="webp">WebP (Fast &amp; Modern)</option>
             <option value="jpeg">JPEG</option>
             <option value="png">PNG</option>
           </select>
@@ -78,7 +78,7 @@
 
         <label class="field">
           <span>Max Target Size (Optional)</span>
-          <input type="text" id="targetSize" placeholder="e.g. 300KB or 1.5MB" />
+          <input type="text" id="targetSize" placeholder="e.g. 300KB, 1.5MB, or 45%" />
         </label>
 
         <label class="field">
@@ -139,16 +139,17 @@
 
       <article class="feature-card">
         <div class="card-tag tag-green">Full Python CLI</div>
-        <h3>Need PDF, HEIC, Video, Audio, Fonts, or Zstd?</h3>
+        <h3>Need PDF, HEIC, GIF, Video, Audio, Fonts, or Zstd?</h3>
         <p class="card-copy">
-          Run the modular Python CLI locally or launch it in one click with GitHub Codespaces for Ghostscript, FFmpeg, FontTools, and Zstandard support:
+          Run <code>python main.py</code> for the guided wizard (format choice, overwrite toggle, and live min-size <code>%</code> slider) — or launch straight in your browser via GitHub Codespaces:
         </p>
         <div class="code-box">
           <code>python main.py help</code>
           <button class="copy-btn" data-copy="python main.py help" type="button">Copy</button>
         </div>
         <div class="cli-samples">
-          <div class="sample-chip" data-copy="python main.py report.pdf -t 2MB"><code>report.pdf -t 2MB</code></div>
+          <div class="sample-chip" data-copy="python main.py photo.jpg --slider"><code>photo.jpg --slider</code></div>
+          <div class="sample-chip" data-copy="python main.py report.pdf -P 35"><code>report.pdf -P 35</code></div>
           <div class="sample-chip" data-copy="python main.py photo.heic -f avif"><code>photo.heic -f avif</code></div>
           <div class="sample-chip" data-copy="python main.py clip.mp4 --video-codec h265"><code>clip.mp4 --video-codec h265</code></div>
           <div class="sample-chip" data-copy="python main.py Inter.ttf"><code>Inter.ttf → .woff2</code></div>

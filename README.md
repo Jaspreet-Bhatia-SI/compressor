@@ -99,9 +99,10 @@ compressor/
 ├── archive_compressor.py   # Archive re-compressor & folder bundler
 ├── .devcontainer/          # One-click GitHub Codespaces terminal (Python + FFmpeg + Ghostscript)
 ├── docs/                   # Light-theme browser-local Web App (GitHub Pages)
+├── launch.sh               # Interactive Desktop launcher wrapper
 ├── LICENSE                 # MIT License & JBSI Trademark Notice
 ├── requirements.txt        # Python dependencies
-└── assets/                 # Animated SVG banner & terminal demo
+└── assets/                 # Animated SVG banners, real CLI session capture & app icon
 ```
 
 ---
@@ -128,8 +129,14 @@ pip install -r requirements.txt
 > Every module in this repo also documents CLI + Python API examples in its header docstring. Run `python main.py help` anytime in your terminal for the built-in cheat sheet.
 
 ### Interactive Mode, Size Slider & Built-in Cheat Sheet
+Running `python main.py` with no flags launches the streamlined interactive flow:
+1. Pick a file (or folder).
+2. Choose **Convert format** *(shown only when the file type supports format conversion)*.
+3. Choose **Overwrite original file? `[y/n]`** *(always writes to the original folder without prompting for an output path)*.
+4. View the **minimum possible size** and adjust the **arrow-key `%` slider** (`min%` → `100%`) before compressing.
+
 ```bash
-python main.py                                     # Launch guided interactive wizard (includes % slider)
+python main.py                                     # Launch streamlined interactive wizard + % slider
 python main.py photo.jpg --slider                  # Probe minimum possible size, then slide % (min%..100%)
 python main.py report.pdf -P 35                    # Compress directly to 35% of original size (or -t 35%)
 python main.py help                                # Show colorful flags, formats & examples cheat sheet
